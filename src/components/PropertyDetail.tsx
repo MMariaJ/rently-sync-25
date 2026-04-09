@@ -193,150 +193,125 @@ function OverviewTab({
           bgColor={pendingTasks.length > 0 ? "bg-primary/10" : "bg-success/10"} />
       </div>
 
-      {/* Tenant + Alerts */}
-      <div className="grid grid-cols-5 gap-5">
-        <div className="col-span-3 bg-card rounded-xl border border-border p-5">
-          <h3 className="font-display text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+      {/* Tenant + Alerts + Lifecycle — single row */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Tenant — compact inline */}
+        <div className="bg-card rounded-xl border border-border p-4">
+          <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
             <User className="w-3.5 h-3.5 text-primary" />
             {hmoTenants ? `Tenants (${hmoTenants.length})` : "Tenant"}
           </h3>
           {hmoTenants ? (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {hmoTenants.map((ht: any) => (
-                <div key={ht.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
-                  <img src={ht.avatarUrl} alt={ht.name} className="w-9 h-9 rounded-full object-cover ring-1 ring-border" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">{ht.name}</span>
-                      {ht.verified && <span className="text-[9px] font-semibold text-success bg-success-muted rounded px-1.5 py-0.5">✓</span>}
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">£{ht.rent}/mo · Since {ht.since}</span>
-                  </div>
+                <div key={ht.id} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg bg-secondary/40">
+                  <img src={ht.avatarUrl} alt={ht.name} className="w-7 h-7 rounded-full object-cover ring-1 ring-border" />
+                  <span className="text-xs font-medium text-foreground flex-1 truncate">{ht.name}</span>
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 text-warning" fill="currentColor" />
-                    <span className="text-xs font-bold text-foreground">{ht.rating}</span>
+                    <span className="text-[10px] font-bold text-foreground">{ht.rating}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : ti ? (
-            <div className="flex items-center gap-4">
-              <img src={ti.avatarUrl} alt={ti.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-border" />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-display text-sm font-bold text-foreground">{ti.name}</span>
-                  {ti.verified && <span className="text-[9px] font-semibold text-success bg-success-muted rounded px-1.5 py-0.5">Verified</span>}
+            <div className="flex items-center gap-3">
+              <img src={ti.avatarUrl} alt={ti.name} className="w-10 h-10 rounded-full object-cover ring-1 ring-border" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-semibold text-foreground">{ti.name}</span>
+                  {ti.verified && <span className="text-[8px] font-semibold text-success bg-success-muted rounded px-1 py-0.5">✓</span>}
                 </div>
-                <div className="flex items-center gap-2">
-                  <StarRating rating={ti.rating} size={11} />
-                  <span className="text-xs font-bold text-foreground">{ti.rating}</span>
-                  <span className="text-[10px] text-muted-foreground">({ti.reviewCount})</span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <StarRating rating={ti.rating} size={10} />
+                  <span className="text-[10px] font-bold text-foreground">{ti.rating}</span>
                 </div>
+                {contract && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{contract.start} → {contract.end}</p>
+                )}
               </div>
-              {contract && (
-                <div className="text-right text-[11px] text-muted-foreground space-y-0.5 shrink-0">
-                  <p className="flex items-center gap-1 justify-end"><Clock className="w-3 h-3" /> Since {contract.start}</p>
-                  <p>Ends {contract.end}</p>
-                </div>
-              )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No tenant assigned</p>
+            <p className="text-xs text-muted-foreground">No tenant assigned</p>
           )}
         </div>
 
-        {/* Alerts with contextual icons */}
-        <div className="col-span-2 bg-card rounded-xl border border-border p-5">
+        {/* Alerts — compact */}
+        <div className="bg-card rounded-xl border border-border p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+            <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
               <AlertTriangle className={cn("w-3.5 h-3.5", alerts.length > 0 ? "text-danger" : "text-success")} />
               Alerts
             </h3>
             {alerts.length > 0 && (
-              <span className="text-[10px] font-bold bg-danger text-primary-foreground rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1.5">
+              <span className="text-[9px] font-bold bg-danger text-primary-foreground rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
                 {alerts.length}
               </span>
             )}
           </div>
           {alerts.length === 0 ? (
-            <div className="flex items-center gap-2 py-4 justify-center">
-              <Check className="w-4 h-4 text-success" />
-              <p className="text-xs text-success font-medium">All clear — no actions required</p>
+            <div className="flex items-center gap-2 py-2 justify-center">
+              <Check className="w-3.5 h-3.5 text-success" />
+              <p className="text-[10px] text-success font-medium">All clear</p>
             </div>
           ) : (
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+            <div className="space-y-1.5">
               {alerts.map((a, i) => (
                 <div key={i} className={cn(
-                  "flex items-start gap-2.5 p-2.5 rounded-lg transition-colors cursor-pointer hover:ring-1 hover:ring-border",
+                  "flex items-start gap-2 p-2 rounded-lg",
                   a.severity === "high" ? "bg-danger/10" : "bg-warning/10"
                 )}>
                   <div className={cn("mt-0.5 shrink-0", a.severity === "high" ? "text-danger" : "text-warning")}>
                     {getAlertIcon(a)}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground leading-snug">{a.text}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{a.action}</p>
-                  </div>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground/40 shrink-0 mt-0.5" />
+                  <p className="text-[11px] font-medium text-foreground leading-snug">{a.text}</p>
                 </div>
               ))}
             </div>
           )}
         </div>
-      </div>
 
-      {/* Lifecycle + Deadlines/Payments */}
-      <div className="grid grid-cols-5 gap-5">
-        <div className="col-span-3 bg-card rounded-xl border border-border p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+        {/* Lifecycle — current phase only */}
+        <div className="bg-card rounded-xl border border-border p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
               <CheckSquare className="w-3.5 h-3.5 text-primary" />
-              Tenancy Lifecycle
+              Lifecycle
             </h3>
-            <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full",
+            <span className={cn("text-[9px] font-semibold px-2 py-0.5 rounded-full",
               pendingTasks.length > 0 ? "text-primary bg-primary/10" : "text-success bg-success-muted"
             )}>
               {curPhaseIdx >= 0 ? PHASES[curPhaseIdx] : "Complete"}
             </span>
           </div>
 
-          <div className="space-y-2 mb-4">
+          {/* Mini phase dots */}
+          <div className="flex items-center gap-1 mb-3">
             {phaseProgress.map((ph, i) => (
-              <div key={ph.name} className="flex items-center gap-3">
-                <span className={cn("text-[10px] font-medium w-24 truncate",
-                  i === curPhaseIdx ? "text-foreground font-semibold" : "text-muted-foreground"
-                )}>{ph.name}</span>
-                <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }} animate={{ width: `${ph.pct}%` }}
-                    transition={{ duration: 0.6, delay: i * 0.1 }}
-                    className={cn("h-full rounded-full", ph.allDone ? "bg-success" : ph.pct > 0 ? "bg-primary" : "")}
-                  />
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div className={cn("w-2 h-2 rounded-full",
+                  ph.allDone ? "bg-success" : i === curPhaseIdx ? "bg-primary" : "bg-border"
+                )} />
+                <div className="w-full h-1 bg-secondary rounded-full overflow-hidden">
+                  <div className={cn("h-full rounded-full", ph.allDone ? "bg-success" : ph.pct > 0 ? "bg-primary" : "")}
+                    style={{ width: `${ph.pct}%` }} />
                 </div>
-                <span className="text-[10px] font-mono text-muted-foreground w-8 text-right">{ph.done}/{ph.total}</span>
               </div>
             ))}
           </div>
 
+          {/* Next actions */}
           {pendingTasks.length > 0 && (
-            <div className="border-t border-border pt-3">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Next actions</p>
-              <div className="space-y-1">
-                {pendingTasks.slice(0, 3).map((t: any) => (
-                  <div key={t.id} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", t.type === "legal" ? "bg-danger" : "bg-info")} />
-                    <span className="text-xs font-medium text-foreground flex-1 truncate">{t.label}</span>
-                    <span className={cn("text-[9px] font-semibold rounded-full px-1.5 py-0.5",
-                      t.type === "legal" ? "text-danger bg-danger-muted" : "text-info bg-info-muted"
-                    )}>{t.type === "legal" ? "Legal" : "Suggested"}</span>
-                  </div>
-                ))}
-                {pendingTasks.length > 3 && (
-                  <p className="text-[10px] text-primary font-semibold pl-2 cursor-pointer hover:underline">
-                    +{pendingTasks.length - 3} more tasks →
-                  </p>
-                )}
-              </div>
+            <div className="space-y-1">
+              {pendingTasks.slice(0, 3).map((t: any) => (
+                <div key={t.id} className="flex items-center gap-2 py-1 px-2 rounded-lg bg-secondary/40">
+                  <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", t.type === "legal" ? "bg-danger" : "bg-info")} />
+                  <span className="text-[10px] font-medium text-foreground flex-1 truncate">{t.label}</span>
+                </div>
+              ))}
+              {pendingTasks.length > 3 && (
+                <p className="text-[9px] text-primary font-semibold pl-2">+{pendingTasks.length - 3} more →</p>
+              )}
             </div>
           )}
         </div>
