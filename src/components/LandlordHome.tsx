@@ -48,31 +48,17 @@ export function LandlordHome({ portfolio, completed, allVaults, onSelectProperty
         </button>
       </motion.div>
 
-      {/* Properties */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-bold text-foreground">Your Properties</h2>
-          <button
-            onClick={onAddProperty}
-            className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-4 h-4" />
-            Add property
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {portfolio.map((p, i) => (
-            <PropertyCard
-              key={p.id}
-              property={p}
-              completed={completed}
-              allVaults={allVaults}
-              onSelect={() => onSelectProperty(p.id)}
-              index={i}
-            />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {portfolio.map((p, i) => (
+          <PropertyCard
+            key={p.id}
+            property={p}
+            completed={completed}
+            allVaults={allVaults}
+            onSelect={() => onSelectProperty(p.id)}
+            index={i}
+          />
+        ))}
       </div>
     </div>
   );
