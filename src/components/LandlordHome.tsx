@@ -1,14 +1,14 @@
 import { cn } from "@/lib/utils";
 import {
   Building2, User, Star, AlertTriangle, Plus,
-  TrendingUp, MapPin, ChevronRight,
+  MapPin, ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { StarRating } from "./StarRating";
 import { ComplianceDonut } from "./ComplianceDonut";
 import {
   TENANT_INFO, HMO_TENANTS, PROP_PHOTOS,
-  PROP_RATINGS, PAYMENTS_BY_PROP, LANDLORD_PROFILE,
+  PROP_RATINGS, PAYMENTS_BY_PROP,
   VAULT_INIT, TASK_DATA, PHASES,
   type Property, type VaultDoc,
 } from "@/data/constants";
@@ -23,73 +23,29 @@ interface LandlordHomeProps {
 }
 
 export function LandlordHome({ portfolio, completed, allVaults, onSelectProperty, onAddProperty }: LandlordHomeProps) {
-  const monthlyIncome = portfolio.reduce((s, p) => s + p.rent, 0);
-  const avgCompliance = Math.round(
-    portfolio.reduce((s, p) => s + getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo), 0) / Math.max(portfolio.length, 1)
-  );
-  const totalAlerts = portfolio.reduce((s, p) => s + getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT).length, 0);
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Welcome + Stats Row */}
+    <div className="space-y-6 pb-12">
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
+        className="flex items-center justify-between"
       >
-        <div className="flex items-end justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <img
-              src={LANDLORD_PROFILE.avatarUrl}
-              alt={LANDLORD_PROFILE.name}
-              className="w-12 h-12 rounded-full object-cover ring-2 ring-border"
-            />
-            <div>
-              <h1 className="font-display text-xl font-bold text-foreground">
-                Welcome back, {LANDLORD_PROFILE.name.split(" ")[0]}
-              </h1>
-              <p className="text-sm text-muted-foreground">Here's your portfolio overview</p>
-            </div>
-          </div>
-          {LANDLORD_PROFILE.verified && (
-            <span className="text-xs font-semibold text-primary bg-landlord-light px-2.5 py-1 rounded-full">
-              ✓ Verified landlord
-            </span>
-          )}
+        <div>
+          <h1 className="font-display text-xl font-bold text-foreground">Your Properties</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {portfolio.length} properties · {portfolio.reduce((s, p) => s + p.rent, 0).toLocaleString("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: 0 })}/month total income
+          </p>
         </div>
-
-        {/* Stat cards */}
-        <div className="grid grid-cols-4 gap-4">
-          <StatCard
-            label="Properties"
-            value={portfolio.length.toString()}
-            icon={<Building2 className="w-4 h-4" />}
-            color="text-primary"
-            bgColor="bg-landlord-light"
-          />
-          <StatCard
-            label="Monthly Income"
-            value={`£${monthlyIncome.toLocaleString()}`}
-            icon={<TrendingUp className="w-4 h-4" />}
-            color="text-success"
-            bgColor="bg-success-muted"
-          />
-          <StatCard
-            label="Compliance"
-            value={`${avgCompliance}%`}
-            icon={<ComplianceDonut percentage={avgCompliance} size={28} strokeWidth={3} showLabel={false} />}
-            color={avgCompliance >= 80 ? "text-success" : avgCompliance >= 50 ? "text-warning" : "text-danger"}
-            bgColor={avgCompliance >= 80 ? "bg-success-muted" : avgCompliance >= 50 ? "bg-warning-muted" : "bg-danger-muted"}
-            subtitle={getRAGLabel(avgCompliance)}
-          />
-          <StatCard
-            label="Active Alerts"
-            value={totalAlerts.toString()}
-            icon={<AlertTriangle className="w-4 h-4" />}
-            color={totalAlerts > 0 ? "text-danger" : "text-success"}
-            bgColor={totalAlerts > 0 ? "bg-danger-muted" : "bg-success-muted"}
-          />
-        </div>
+        <button
+          onClick={onAddProperty}
+          className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+        >
+          <Plus className="w-4 h-4" />
+          Add property
+        </button>
       </motion.div>
 
       {/* Properties */}
@@ -122,25 +78,6 @@ export function LandlordHome({ portfolio, completed, allVaults, onSelectProperty
   );
 }
 
-function StatCard({
-  label, value, icon, color, bgColor, subtitle,
-}: {
-  label: string; value: string; icon: React.ReactNode;
-  color: string; bgColor: string; subtitle?: string;
-}) {
-  return (
-    <div className="bg-card rounded-xl border border-border p-4 shadow-soft">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", bgColor, color)}>
-          {icon}
-        </div>
-      </div>
-      <p className={cn("font-display text-2xl font-bold", color)}>{value}</p>
-      {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
-    </div>
-  );
-}
 
 function PropertyCard({
   property: p, completed, allVaults, onSelect, index,

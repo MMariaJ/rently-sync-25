@@ -1,14 +1,14 @@
 import { motion } from "framer-motion";
 import {
   Building2, TrendingUp, AlertTriangle, Shield, Calendar,
-  ChevronRight, Clock, FileText, ArrowUpRight, ArrowDownRight,
-  Sparkles,
+  ChevronRight, Clock, Star, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ComplianceDonut } from "./ComplianceDonut";
+import { StarRating } from "./StarRating";
 import {
   PORTFOLIO, TENANT_INFO, HMO_TENANTS, VAULT_INIT,
-  PAYMENTS_BY_PROP, LANDLORD_PROFILE, DOC_VALIDITY_BY_PROP,
+  LANDLORD_PROFILE, DOC_VALIDITY_BY_PROP, PROP_RATINGS,
   type Property, type VaultDoc,
 } from "@/data/constants";
 import { getPropertyAlerts, getComplianceForProperty, getRAGColor, getRAGLabel } from "@/data/helpers";
@@ -34,6 +34,13 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
     return s;
   }, 0);
 
+  // Landlord overall rating
+  const allRatings = portfolio.map(p => PROP_RATINGS[p.id]).filter(Boolean);
+  const totalReviews = allRatings.reduce((s, r) => s + r.count, 0);
+  const weightedRating = totalReviews > 0
+    ? allRatings.reduce((s, r) => s + r.rating * r.count, 0) / totalReviews
+    : 0;
+
   const upcomingDeadlines = portfolio.flatMap(p => {
     const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
     const propLabel = p.address.split(",")[0];
@@ -41,16 +48,6 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
       .filter(([, v]) => v.days > 0 && v.days <= 180)
       .map(([doc, v]) => ({ property: propLabel, propId: p.id, doc, ...v }));
   }).sort((a, b) => a.days - b.days);
-
-  const recentPayments = portfolio.flatMap(p => {
-    const payments = PAYMENTS_BY_PROP[p.id] || [];
-    const propLabel = p.address.split(",")[0];
-    return payments.slice(0, 2).map(pm => ({ ...pm, property: propLabel, propId: p.id }));
-  }).slice(0, 5);
-
-  const missedPaymentsTotal = portfolio.reduce((s, p) => {
-    return s + (PAYMENTS_BY_PROP[p.id] || []).filter(pm => pm.status === "missed").length;
-  }, 0);
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -60,25 +57,21 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
   })();
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="space-y-6 pb-12">
       {/* Hero welcome banner */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 via-primary to-primary/80 p-8 text-primary-foreground"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 via-primary to-primary/80 p-7 text-primary-foreground"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary-foreground)/0.08),transparent_60%)]" />
         <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-primary-foreground/5" />
-        <div className="absolute right-12 bottom-4 w-24 h-24 rounded-full bg-primary-foreground/5" />
-        
+
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-5">
-            <img
-              src={LANDLORD_PROFILE.avatarUrl}
-              alt={LANDLORD_PROFILE.name}
-              className="w-14 h-14 rounded-full object-cover ring-3 ring-primary-foreground/20 shadow-lg"
-            />
+            <img src={LANDLORD_PROFILE.avatarUrl} alt={LANDLORD_PROFILE.name}
+              className="w-14 h-14 rounded-full object-cover ring-3 ring-primary-foreground/20 shadow-lg" />
             <div>
               <h1 className="font-display text-2xl font-bold tracking-tight">
                 {greeting}, {LANDLORD_PROFILE.name.split(" ")[0]}
@@ -95,264 +88,165 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
         </div>
       </motion.div>
 
-      {/* KPI cards */}
+      {/* KPI row — 4 compact cards */}
       <motion.div
-        className="grid grid-cols-2 lg:grid-cols-4 gap-5"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.08 }}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.06 }}
       >
-        <KPICard
-          label="Properties"
-          value={portfolio.length.toString()}
-          icon={<Building2 className="w-5 h-5" />}
-          color="text-primary"
-          bgColor="bg-landlord-light"
-          subtitle={`${totalTenants} active tenant${totalTenants !== 1 ? "s" : ""}`}
-        />
-        <KPICard
-          label="Monthly Income"
-          value={`£${monthlyIncome.toLocaleString()}`}
-          icon={<TrendingUp className="w-5 h-5" />}
-          color="text-success"
-          bgColor="bg-success-muted"
-          subtitle={missedPaymentsTotal > 0 ? `${missedPaymentsTotal} missed` : "All on track"}
-          subtitleColor={missedPaymentsTotal > 0 ? "text-danger" : undefined}
-        />
-        <KPICard
-          label="Avg. Compliance"
-          value={`${avgCompliance}%`}
-          icon={<ComplianceDonut percentage={avgCompliance} size={32} strokeWidth={3} showLabel={false} />}
+        <KPICard label="Properties" value={portfolio.length.toString()}
+          icon={<Building2 className="w-4 h-4" />} color="text-primary" bgColor="bg-landlord-light" />
+        <KPICard label="Monthly Income" value={`£${monthlyIncome.toLocaleString()}`}
+          icon={<TrendingUp className="w-4 h-4" />} color="text-success" bgColor="bg-success-muted" />
+        <KPICard label="Compliance" value={`${avgCompliance}%`}
+          icon={<ComplianceDonut percentage={avgCompliance} size={28} strokeWidth={3} showLabel={false} />}
           color={avgCompliance >= 80 ? "text-success" : avgCompliance >= 50 ? "text-warning" : "text-danger"}
           bgColor={avgCompliance >= 80 ? "bg-success-muted" : avgCompliance >= 50 ? "bg-warning-muted" : "bg-danger-muted"}
-          subtitle={getRAGLabel(avgCompliance)}
-        />
-        <KPICard
-          label="Action Items"
-          value={highAlerts.length.toString()}
-          icon={<AlertTriangle className="w-5 h-5" />}
+          subtitle={getRAGLabel(avgCompliance)} />
+        <KPICard label="Action Items" value={highAlerts.length.toString()}
+          icon={<AlertTriangle className="w-4 h-4" />}
           color={highAlerts.length > 0 ? "text-danger" : "text-success"}
-          bgColor={highAlerts.length > 0 ? "bg-danger-muted" : "bg-success-muted"}
-          subtitle={highAlerts.length > 0 ? "High priority" : "All clear"}
-        />
+          bgColor={highAlerts.length > 0 ? "bg-danger-muted" : "bg-success-muted"} />
       </motion.div>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Left column */}
-        <motion.div
-          className="lg:col-span-3 space-y-6"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.15 }}
-        >
-          {/* Alerts */}
-          {allAlerts.length > 0 && (
-            <SectionCard
-              title="Active Alerts"
-              icon={<AlertTriangle className="w-4 h-4 text-danger" />}
-              badge={`${allAlerts.length} total`}
-            >
-              <div className="divide-y divide-border">
-                {allAlerts.slice(0, 5).map((a, i) => (
-                  <button
-                    key={i}
-                    onClick={() => onSelectProperty(a.propId)}
-                    className="w-full flex items-center gap-4 py-3.5 px-1 hover:bg-secondary/40 transition-colors text-left group first:pt-0 last:pb-0"
-                  >
-                    <div className={cn(
-                      "w-2.5 h-2.5 rounded-full shrink-0",
-                      a.severity === "high" ? "bg-danger" : "bg-warning"
-                    )} />
+      {/* Main content — 3 columns */}
+      <motion.div
+        className="grid grid-cols-1 lg:grid-cols-3 gap-5"
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.12 }}
+      >
+        {/* Col 1: Alerts (compact) */}
+        <div className="bg-card rounded-xl border border-border p-5">
+          <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-3.5 h-3.5 text-danger" /> Alerts
+            <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">{allAlerts.length}</span>
+          </h2>
+          <div className="space-y-1 max-h-52 overflow-y-auto">
+            {allAlerts.slice(0, 6).map((a, i) => (
+              <button key={i} onClick={() => onSelectProperty(a.propId)}
+                className="w-full flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-secondary/50 transition-colors text-left group">
+                <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", a.severity === "high" ? "bg-danger" : "bg-warning")} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">{a.text}</p>
+                  <p className="text-[10px] text-muted-foreground">{a.property}</p>
+                </div>
+                <ChevronRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-foreground transition-colors shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Col 2: Compliance per property */}
+        <div className="bg-card rounded-xl border border-border p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-primary" /> Compliance
+            </h2>
+            <button onClick={onNavigateToProperties} className="text-[10px] text-primary font-semibold hover:underline flex items-center gap-0.5">
+              All <ChevronRight className="w-2.5 h-2.5" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {portfolio.map(p => {
+              const pct = getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo);
+              return (
+                <button key={p.id} onClick={() => onSelectProperty(p.id)}
+                  className="w-full flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-secondary/50 transition-colors group">
+                  <ComplianceDonut percentage={pct} size={32} strokeWidth={3} showLabel={false} />
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-xs font-semibold text-foreground truncate">{p.address.split(",")[0]}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: getRAGColor(pct) }} />
+                      </div>
+                      <span className="text-[10px] font-bold" style={{ color: getRAGColor(pct) }}>{pct}%</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Col 3: Deadlines + Reviews stacked */}
+        <div className="space-y-5">
+          {/* Deadlines */}
+          <div className="bg-card rounded-xl border border-border p-5">
+            <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
+              <Calendar className="w-3.5 h-3.5 text-warning" /> Deadlines
+            </h2>
+            {upcomingDeadlines.length > 0 ? (
+              <div className="space-y-1">
+                {upcomingDeadlines.slice(0, 3).map((d, i) => (
+                  <button key={i} onClick={() => onSelectProperty(d.propId)}
+                    className="w-full flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-secondary/50 transition-colors text-left">
+                    <Clock className={cn("w-3.5 h-3.5 shrink-0", d.days <= 90 ? "text-warning" : "text-muted-foreground")} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{a.text}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{a.property}</p>
+                      <p className="text-xs font-medium text-foreground truncate">{d.doc}</p>
+                      <p className="text-[10px] text-muted-foreground">{d.property} · {d.expiry}</p>
                     </div>
                     <span className={cn(
-                      "text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shrink-0",
-                      a.severity === "high" ? "bg-danger-muted text-danger" : "bg-warning-muted text-warning"
-                    )}>
-                      {a.severity}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
+                      "text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
+                      d.days <= 90 ? "bg-warning-muted text-warning" : "bg-secondary text-muted-foreground"
+                    )}>{d.days}d</span>
                   </button>
                 ))}
               </div>
-            </SectionCard>
-          )}
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-3">No upcoming deadlines</p>
+            )}
+          </div>
 
-          {/* Compliance by property */}
-          <SectionCard
-            title="Compliance by Property"
-            icon={<Shield className="w-4 h-4 text-primary" />}
-            action={
-              <button onClick={onNavigateToProperties} className="text-xs text-primary font-semibold hover:underline flex items-center gap-1">
-                View all <ChevronRight className="w-3 h-3" />
-              </button>
-            }
-          >
-            <div className="space-y-1">
+          {/* Landlord Reviews */}
+          <div className="bg-card rounded-xl border border-border p-5">
+            <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
+              <Star className="w-3.5 h-3.5 text-warning" /> Your Rating
+            </h2>
+            <div className="flex items-center gap-4 mb-3">
+              <div className="text-center">
+                <p className="font-display text-3xl font-bold text-foreground">{weightedRating.toFixed(1)}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{totalReviews} reviews</p>
+              </div>
+              <div className="flex-1">
+                <StarRating rating={weightedRating} size={18} />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Across {portfolio.length} properties
+                </p>
+              </div>
+            </div>
+            {/* Per-property ratings */}
+            <div className="space-y-1.5 pt-3 border-t border-border">
               {portfolio.map(p => {
-                const pct = getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo);
-                const alerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
+                const pr = PROP_RATINGS[p.id];
+                if (!pr) return null;
                 return (
-                  <button
-                    key={p.id}
-                    onClick={() => onSelectProperty(p.id)}
-                    className="w-full flex items-center gap-4 p-3.5 rounded-xl hover:bg-secondary/50 transition-colors group"
-                  >
-                    <ComplianceDonut percentage={pct} size={40} strokeWidth={3.5} showLabel={false} />
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="text-sm font-semibold text-foreground truncate">{p.address.split(",")[0]}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {pct}% compliant · {alerts.length} alert{alerts.length !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-24 h-2 bg-secondary rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: getRAGColor(pct) }} />
-                      </div>
-                      <span className="text-xs font-bold w-8 text-right" style={{ color: getRAGColor(pct) }}>{pct}%</span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
-                    </div>
+                  <button key={p.id} onClick={() => onSelectProperty(p.id)}
+                    className="w-full flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-secondary/50 transition-colors text-left group">
+                    <Star className="w-3 h-3 text-warning shrink-0" fill="currentColor" />
+                    <span className="text-xs font-semibold text-foreground">{pr.rating}</span>
+                    <span className="text-xs text-muted-foreground truncate flex-1">{p.address.split(",")[0]}</span>
+                    <span className="text-[10px] text-muted-foreground">{pr.count} reviews</span>
                   </button>
                 );
               })}
             </div>
-          </SectionCard>
-        </motion.div>
-
-        {/* Right column */}
-        <motion.div
-          className="lg:col-span-2 space-y-6"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          {/* Upcoming deadlines */}
-          <SectionCard
-            title="Upcoming Deadlines"
-            icon={<Calendar className="w-4 h-4 text-warning" />}
-          >
-            {upcomingDeadlines.length > 0 ? (
-              <div className="space-y-1">
-                {upcomingDeadlines.slice(0, 5).map((d, i) => (
-                  <button
-                    key={i}
-                    onClick={() => onSelectProperty(d.propId)}
-                    className="w-full flex items-start gap-3.5 p-3 rounded-xl hover:bg-secondary/50 transition-colors text-left"
-                  >
-                    <div className={cn(
-                      "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                      d.status === "expiring" ? "bg-warning-muted text-warning" : "bg-secondary text-muted-foreground"
-                    )}>
-                      <Clock className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{d.doc}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{d.property} · {d.expiry}</p>
-                    </div>
-                    <span className={cn(
-                      "text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 mt-0.5",
-                      d.days <= 90 ? "bg-warning-muted text-warning" : "bg-secondary text-muted-foreground"
-                    )}>
-                      {d.days}d
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <EmptyState text="No upcoming deadlines" />
-            )}
-          </SectionCard>
-
-          {/* Recent payments */}
-          <SectionCard
-            title="Recent Payments"
-            icon={<FileText className="w-4 h-4 text-success" />}
-          >
-            {recentPayments.length > 0 ? (
-              <div className="divide-y divide-border">
-                {recentPayments.map((pm, i) => (
-                  <div key={i} className="flex items-center gap-3.5 py-3.5 first:pt-0 last:pb-0">
-                    <div className={cn(
-                      "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                      pm.status === "paid" ? "bg-success-muted text-success" :
-                        pm.status === "missed" ? "bg-danger-muted text-danger" :
-                          "bg-warning-muted text-warning"
-                    )}>
-                      {pm.status === "paid" ? <ArrowUpRight className="w-4 h-4" /> :
-                        pm.status === "missed" ? <ArrowDownRight className="w-4 h-4" /> :
-                          <Clock className="w-4 h-4" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{pm.property}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{pm.date}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-foreground">£{pm.amount.toLocaleString()}</p>
-                      <p className={cn(
-                        "text-[10px] font-bold uppercase tracking-wider mt-0.5",
-                        pm.status === "paid" ? "text-success" : pm.status === "missed" ? "text-danger" : "text-warning"
-                      )}>
-                        {pm.status}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState text="No payment data" />
-            )}
-          </SectionCard>
-        </motion.div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Reusable sub-components ── */
-
-function SectionCard({ title, icon, badge, action, children }: {
-  title: string; icon: React.ReactNode; badge?: string;
-  action?: React.ReactNode; children: React.ReactNode;
-}) {
-  return (
-    <div className="bg-card rounded-2xl border border-border p-6 shadow-soft">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="font-display text-sm font-bold text-foreground flex items-center gap-2.5">
-          {icon} {title}
-        </h2>
-        {badge && <span className="text-xs text-muted-foreground">{badge}</span>}
-        {action}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function KPICard({ label, value, icon, color, bgColor, subtitle, subtitleColor }: {
-  label: string; value: string; icon: React.ReactNode;
-  color: string; bgColor: string; subtitle?: string; subtitleColor?: string;
-}) {
-  return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-soft hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", bgColor, color)}>
-          {icon}
+          </div>
         </div>
-      </div>
-      <p className={cn("font-display text-3xl font-bold tracking-tight", color)}>{value}</p>
-      {subtitle && <p className={cn("text-xs mt-1.5", subtitleColor || "text-muted-foreground")}>{subtitle}</p>}
+      </motion.div>
     </div>
   );
 }
 
-function EmptyState({ text }: { text: string }) {
+function KPICard({ label, value, icon, color, bgColor, subtitle }: {
+  label: string; value: string; icon: React.ReactNode;
+  color: string; bgColor: string; subtitle?: string;
+}) {
   return (
-    <div className="flex items-center justify-center py-8">
-      <p className="text-sm text-muted-foreground">{text}</p>
+    <div className="bg-card rounded-xl border border-border p-4 shadow-soft">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", bgColor, color)}>{icon}</div>
+      </div>
+      <p className={cn("font-display text-2xl font-bold", color)}>{value}</p>
+      {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
     </div>
   );
 }
