@@ -135,16 +135,24 @@ export function PropertyDetail({ property: p, completed, allVaults, onBack }: Pr
         />
       )}
 
-      {activeTab !== "overview" && (
-        <div className="bg-card rounded-xl border border-border p-12 text-center">
-          <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mx-auto mb-3">
-            <FileText className="w-5 h-5 text-muted-foreground" />
-          </div>
-          <p className="text-sm font-semibold text-foreground mb-1">
-            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </p>
-          <p className="text-xs text-muted-foreground">Coming in the next iteration</p>
-        </div>
+      {activeTab === "tasks" && (
+        <TasksTab property={p} completed={completed} allVaults={allVaults} />
+      )}
+
+      {activeTab === "vault" && (
+        <VaultTab property={p} allVaults={allVaults} />
+      )}
+
+      {activeTab === "comms" && (
+        <CommsTab property={p} />
+      )}
+
+      {activeTab === "payments" && (
+        <PaymentsTab property={p} />
+      )}
+
+      {activeTab === "reviews" && (
+        <ReviewsTab property={p} />
       )}
     </div>
   );
