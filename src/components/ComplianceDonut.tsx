@@ -5,15 +5,16 @@ interface ComplianceDonutProps {
   size?: number;
   strokeWidth?: number;
   className?: string;
+  showLabel?: boolean;
 }
 
-export function ComplianceDonut({ percentage, size = 48, strokeWidth = 4, className }: ComplianceDonutProps) {
+export function ComplianceDonut({ percentage, size = 52, strokeWidth = 5, className, showLabel = true }: ComplianceDonutProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percentage / 100) * circumference;
 
   const color = percentage === 0
-    ? "text-muted-foreground"
+    ? "text-muted-foreground/30"
     : percentage < 50
       ? "text-danger"
       : percentage < 80
@@ -28,7 +29,7 @@ export function ComplianceDonut({ percentage, size = 48, strokeWidth = 4, classN
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="hsl(var(--border))"
+          stroke="hsl(var(--secondary))"
           strokeWidth={strokeWidth}
         />
         {percentage > 0 && (
@@ -42,13 +43,15 @@ export function ComplianceDonut({ percentage, size = 48, strokeWidth = 4, classN
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            className={cn("transition-all duration-500", color)}
+            className={cn("transition-all duration-700 ease-out", color)}
           />
         )}
       </svg>
-      <span className="absolute text-xs font-bold text-foreground">
-        {percentage}%
-      </span>
+      {showLabel && (
+        <span className="absolute text-[11px] font-bold text-foreground">
+          {percentage}%
+        </span>
+      )}
     </div>
   );
 }
