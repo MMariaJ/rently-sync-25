@@ -315,6 +315,7 @@ function OverviewTab({
             </div>
           )}
         </div>
+      </div>
 
       {/* Deadlines + Payments — side by side */}
       <div className="grid grid-cols-2 gap-4">
