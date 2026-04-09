@@ -9,7 +9,7 @@ export function SplashScreen({ onSelectRole }: SplashScreenProps) {
   return (
     <div className="min-h-screen bg-primary flex items-center justify-center relative overflow-hidden">
       {/* Subtle grid pattern */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
         backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
         backgroundSize: "32px 32px",
       }} />
