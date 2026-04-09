@@ -23,11 +23,6 @@ interface LandlordHomeProps {
 }
 
 export function LandlordHome({ portfolio, completed, allVaults, onSelectProperty, onAddProperty }: LandlordHomeProps) {
-  const monthlyIncome = portfolio.reduce((s, p) => s + p.rent, 0);
-  const avgCompliance = Math.round(
-    portfolio.reduce((s, p) => s + getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo), 0) / Math.max(portfolio.length, 1)
-  );
-  const totalAlerts = portfolio.reduce((s, p) => s + getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT).length, 0);
 
   return (
     <div className="space-y-6 pb-12">
@@ -83,25 +78,6 @@ export function LandlordHome({ portfolio, completed, allVaults, onSelectProperty
   );
 }
 
-function StatCard({
-  label, value, icon, color, bgColor, subtitle,
-}: {
-  label: string; value: string; icon: React.ReactNode;
-  color: string; bgColor: string; subtitle?: string;
-}) {
-  return (
-    <div className="bg-card rounded-xl border border-border p-4 shadow-soft">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", bgColor, color)}>
-          {icon}
-        </div>
-      </div>
-      <p className={cn("font-display text-2xl font-bold", color)}>{value}</p>
-      {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
-    </div>
-  );
-}
 
 function PropertyCard({
   property: p, completed, allVaults, onSelect, index,
