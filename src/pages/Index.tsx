@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SplashScreen } from "@/components/SplashScreen";
 import { AppSidebar } from "@/components/AppSidebar";
+import { Dashboard } from "@/components/Dashboard";
 import { LandlordHome } from "@/components/LandlordHome";
 import { PropertyDetail } from "@/components/PropertyDetail";
 import {
@@ -63,7 +64,19 @@ export default function Index() {
       );
     }
 
-    if (isLL && (sidebarTab === "home" || sidebarTab === "properties")) {
+    if (isLL && sidebarTab === "home") {
+      return (
+        <Dashboard
+          portfolio={portfolio}
+          completed={completed}
+          allVaults={allVaults}
+          onSelectProperty={(id) => setActiveProp(id)}
+          onNavigateToProperties={() => setSidebarTab("properties")}
+        />
+      );
+    }
+
+    if (isLL && sidebarTab === "properties") {
       return (
         <LandlordHome
           portfolio={portfolio}
