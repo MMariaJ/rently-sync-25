@@ -7,6 +7,11 @@ import {
 } from "lucide-react";
 import { ComplianceDonut } from "./ComplianceDonut";
 import { StarRating } from "./StarRating";
+import { TasksTab } from "./TasksTab";
+import { VaultTab } from "./VaultTab";
+import { CommsTab } from "./CommsTab";
+import { PaymentsTab } from "./PaymentsTab";
+import { ReviewsTab } from "./ReviewsTab";
 import {
   TENANT_INFO, HMO_TENANTS, PROP_RATINGS, PROP_CONTRACT,
   PAYMENTS_BY_PROP, RECURRING_PAYMENTS, DOC_VALIDITY_BY_PROP,
