@@ -38,7 +38,6 @@ export default function Index() {
     p3: P3_VAULT_INIT,
   });
 
-  // Splash screen
   if (!role) {
     return <SplashScreen onSelectRole={(r) => { setRole(r); setSidebarTab("home"); }} />;
   }
@@ -53,7 +52,6 @@ export default function Index() {
   };
 
   const renderContent = () => {
-    // Property detail view
     if (isLL && activeProp && prop) {
       return (
         <PropertyDetail
@@ -65,7 +63,6 @@ export default function Index() {
       );
     }
 
-    // Landlord home / portfolio
     if (isLL && (sidebarTab === "home" || sidebarTab === "properties")) {
       return (
         <LandlordHome
@@ -78,9 +75,8 @@ export default function Index() {
       );
     }
 
-    // Other tabs — placeholder
     return (
-      <div className="bg-card rounded-2xl border border-border p-12 text-center">
+      <div className="bg-card rounded-xl border border-border p-12 text-center">
         <p className="text-muted-foreground text-sm">
           {sidebarTab.charAt(0).toUpperCase() + sidebarTab.slice(1)} — coming in next iteration
         </p>
@@ -103,26 +99,8 @@ export default function Index() {
         onExpandedChange={setSidebarExpanded}
       />
 
-      {/* Main content */}
-      <main className="ml-[60px] min-h-screen">
-        <div className="max-w-5xl mx-auto px-8 py-8">
-          {/* Page header */}
-          <div className="mb-6">
-            <h1 className="text-xl font-bold text-foreground tracking-tight">
-              {activeProp && prop
-                ? prop.address.split(",")[0]
-                : sidebarTab === "home" || sidebarTab === "properties"
-                  ? "Portfolio"
-                  : sidebarTab.charAt(0).toUpperCase() + sidebarTab.slice(1)
-              }
-            </h1>
-            {!activeProp && (sidebarTab === "home" || sidebarTab === "properties") && (
-              <p className="text-sm text-muted-foreground mt-0.5">Manage your properties and compliance</p>
-            )}
-          </div>
-
-          {renderContent()}
-        </div>
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        {renderContent()}
       </main>
     </div>
   );

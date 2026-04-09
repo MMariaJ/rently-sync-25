@@ -1,10 +1,13 @@
 import { cn } from "@/lib/utils";
-import { Building2, User, ArrowRight, Star, AlertTriangle, Plus } from "lucide-react";
+import {
+  Building2, User, Star, AlertTriangle, Plus,
+  TrendingUp, MapPin, ChevronRight,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { StarRating } from "./StarRating";
 import { ComplianceDonut } from "./ComplianceDonut";
 import {
-  PORTFOLIO, TENANT_INFO, HMO_TENANTS, PROP_PHOTOS,
+  TENANT_INFO, HMO_TENANTS, PROP_PHOTOS,
   PROP_RATINGS, PAYMENTS_BY_PROP, LANDLORD_PROFILE,
   VAULT_INIT, TASK_DATA, PHASES,
   type Property, type VaultDoc,
@@ -27,117 +30,123 @@ export function LandlordHome({ portfolio, completed, allVaults, onSelectProperty
   const totalAlerts = portfolio.reduce((s, p) => s + getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT).length, 0);
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Header card */}
+    <div className="space-y-8 pb-12">
+      {/* Welcome + Stats Row */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="bg-card rounded-2xl border border-border p-6 shadow-card"
+        transition={{ duration: 0.4 }}
       >
-        <div className="flex items-center gap-5">
-          <img
-            src={LANDLORD_PROFILE.avatarUrl}
-            alt={LANDLORD_PROFILE.name}
-            className="w-14 h-14 rounded-2xl object-cover border-2 border-border"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg font-bold text-foreground tracking-tight">{LANDLORD_PROFILE.name}</h2>
-              {LANDLORD_PROFILE.verified && (
-                <span className="text-[10px] font-semibold text-success bg-success-muted px-2 py-0.5 rounded-md border border-success/20">
-                  Verified
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <StarRating rating={LANDLORD_PROFILE.rating} size={12} />
-              <span className="font-bold text-foreground">{LANDLORD_PROFILE.rating}</span>
-              <span className="text-muted-foreground text-xs">({LANDLORD_PROFILE.reviewCount} reviews)</span>
-              <span className="text-muted-foreground text-xs">·</span>
-              <span className="text-muted-foreground text-xs">{portfolio.length} properties</span>
+        <div className="flex items-end justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <img
+              src={LANDLORD_PROFILE.avatarUrl}
+              alt={LANDLORD_PROFILE.name}
+              className="w-12 h-12 rounded-full object-cover ring-2 ring-border"
+            />
+            <div>
+              <h1 className="font-display text-xl font-bold text-foreground">
+                Welcome back, {LANDLORD_PROFILE.name.split(" ")[0]}
+              </h1>
+              <p className="text-sm text-muted-foreground">Here's your portfolio overview</p>
             </div>
           </div>
+          {LANDLORD_PROFILE.verified && (
+            <span className="text-xs font-semibold text-primary bg-landlord-light px-2.5 py-1 rounded-full">
+              ✓ Verified landlord
+            </span>
+          )}
+        </div>
 
-          {/* Stats */}
-          <div className="flex items-center gap-6 shrink-0">
-            <div className="text-right">
-              <p className="text-xl font-black text-foreground tracking-tight leading-none">
-                £{monthlyIncome.toLocaleString()}
-              </p>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mt-1">
-                Monthly Rent
-              </p>
-            </div>
-            <div className="w-px h-10 bg-border" />
-            <div className="flex items-center gap-3">
-              <ComplianceDonut percentage={avgCompliance} />
-              <div>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Compliance</p>
-                <p className={cn("text-sm font-bold", avgCompliance >= 80 ? "text-success" : avgCompliance >= 50 ? "text-warning" : "text-danger")}>
-                  {getRAGLabel(avgCompliance)}
-                </p>
-              </div>
-            </div>
-          </div>
+        {/* Stat cards */}
+        <div className="grid grid-cols-4 gap-4">
+          <StatCard
+            label="Properties"
+            value={portfolio.length.toString()}
+            icon={<Building2 className="w-4 h-4" />}
+            color="text-primary"
+            bgColor="bg-landlord-light"
+          />
+          <StatCard
+            label="Monthly Income"
+            value={`£${monthlyIncome.toLocaleString()}`}
+            icon={<TrendingUp className="w-4 h-4" />}
+            color="text-success"
+            bgColor="bg-success-muted"
+          />
+          <StatCard
+            label="Compliance"
+            value={`${avgCompliance}%`}
+            icon={<ComplianceDonut percentage={avgCompliance} size={28} strokeWidth={3} showLabel={false} />}
+            color={avgCompliance >= 80 ? "text-success" : avgCompliance >= 50 ? "text-warning" : "text-danger"}
+            bgColor={avgCompliance >= 80 ? "bg-success-muted" : avgCompliance >= 50 ? "bg-warning-muted" : "bg-danger-muted"}
+            subtitle={getRAGLabel(avgCompliance)}
+          />
+          <StatCard
+            label="Active Alerts"
+            value={totalAlerts.toString()}
+            icon={<AlertTriangle className="w-4 h-4" />}
+            color={totalAlerts > 0 ? "text-danger" : "text-success"}
+            bgColor={totalAlerts > 0 ? "bg-danger-muted" : "bg-success-muted"}
+          />
         </div>
       </motion.div>
 
-      {/* Section header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-foreground" />
-          <h3 className="text-base font-bold text-foreground">Properties</h3>
-          <span className="text-xs bg-secondary text-muted-foreground rounded-md px-2 py-0.5 font-semibold">
-            {portfolio.length}
-          </span>
+      {/* Properties */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-lg font-bold text-foreground">Your Properties</h2>
+          <button
+            onClick={onAddProperty}
+            className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" />
+            Add property
+          </button>
         </div>
-        {totalAlerts > 0 && (
-          <div className="flex items-center gap-1.5 text-danger text-xs font-semibold">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            {totalAlerts} alert{totalAlerts > 1 ? "s" : ""} across properties
-          </div>
-        )}
-      </div>
 
-      {/* Property cards */}
-      <div className="grid grid-cols-1 gap-3">
-        {portfolio.map((p, i) => (
-          <PropertyCard
-            key={p.id}
-            property={p}
-            completed={completed}
-            allVaults={allVaults}
-            onSelect={() => onSelectProperty(p.id)}
-            index={i}
-          />
-        ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {portfolio.map((p, i) => (
+            <PropertyCard
+              key={p.id}
+              property={p}
+              completed={completed}
+              allVaults={allVaults}
+              onSelect={() => onSelectProperty(p.id)}
+              index={i}
+            />
+          ))}
+        </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Add property */}
-      <button
-        onClick={onAddProperty}
-        className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-border hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
-      >
-        <Plus className="w-4 h-4" />
-        Add a property
-      </button>
+function StatCard({
+  label, value, icon, color, bgColor, subtitle,
+}: {
+  label: string; value: string; icon: React.ReactNode;
+  color: string; bgColor: string; subtitle?: string;
+}) {
+  return (
+    <div className="bg-card rounded-xl border border-border p-4 shadow-soft">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", bgColor, color)}>
+          {icon}
+        </div>
+      </div>
+      <p className={cn("font-display text-2xl font-bold", color)}>{value}</p>
+      {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
     </div>
   );
 }
 
 function PropertyCard({
-  property: p,
-  completed,
-  allVaults,
-  onSelect,
-  index,
+  property: p, completed, allVaults, onSelect, index,
 }: {
-  property: Property;
-  completed: Record<string, boolean>;
-  allVaults: Record<string, VaultDoc[]>;
-  onSelect: () => void;
-  index: number;
+  property: Property; completed: Record<string, boolean>;
+  allVaults: Record<string, VaultDoc[]>; onSelect: () => void; index: number;
 }) {
   const pct = getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo);
   const alerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
@@ -149,7 +158,6 @@ function PropertyCard({
   const pr = PROP_RATINGS[p.id] || { rating: 0, count: 0 };
   const hmoTenants = p.isHmo ? HMO_TENANTS[p.id] : null;
 
-  // Current phase
   const vault = allVaults[p.id] || VAULT_INIT;
   const isDocUp = (n: string) => vault.some(d => d.name === n && d.status === "uploaded");
   const isDone = (t: any) => completed[`${p.id}_${t.id}`] || (t.vaultDoc && isDocUp(t.vaultDoc));
@@ -161,120 +169,128 @@ function PropertyCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
+      transition={{ duration: 0.35, delay: index * 0.08 }}
       onClick={onSelect}
-      className="bg-card rounded-2xl border border-border overflow-hidden cursor-pointer transition-shadow hover:shadow-card-hover group"
+      className="bg-card rounded-xl border border-border overflow-hidden cursor-pointer transition-all hover:shadow-card-hover hover:-translate-y-0.5 group"
     >
-      <div className="flex h-[148px]">
-        {/* Property image */}
-        <div className="w-36 shrink-0 overflow-hidden relative">
-          {photo ? (
-            <img src={photo.src} alt={photo.label} className="w-full h-full object-cover" />
+      {/* Image */}
+      <div className="h-36 overflow-hidden relative">
+        {photo ? (
+          <img src={photo.src} alt={photo.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        ) : (
+          <div className="w-full h-full bg-secondary flex items-center justify-center">
+            <Building2 className="w-8 h-8 text-muted-foreground/30" />
+          </div>
+        )}
+        {/* Overlay badges */}
+        <div className="absolute top-3 left-3 flex gap-1.5">
+          {p.status === "active" && (
+            <span className="text-[10px] font-semibold bg-success/90 text-success-foreground backdrop-blur-sm rounded-full px-2 py-0.5">
+              Active
+            </span>
+          )}
+          {p.isHmo && (
+            <span className="text-[10px] font-bold bg-primary/90 text-primary-foreground backdrop-blur-sm rounded-full px-2 py-0.5">
+              HMO
+            </span>
+          )}
+        </div>
+        {hasHigh && (
+          <div className="absolute top-3 right-3">
+            <span className="flex items-center gap-1 text-[10px] font-semibold bg-danger/90 text-primary-foreground backdrop-blur-sm rounded-full px-2 py-0.5">
+              <AlertTriangle className="w-3 h-3" /> Action needed
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="p-4 space-y-3">
+        {/* Address + rent */}
+        <div className="flex items-start justify-between">
+          <div className="min-w-0 flex-1">
+            <h4 className="font-display text-sm font-bold text-foreground truncate">
+              {p.address.split(",")[0]}
+            </h4>
+            <div className="flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3 h-3 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground truncate">
+                {p.address.split(",").slice(1).join(",").trim()}
+              </span>
+            </div>
+          </div>
+          <div className="text-right shrink-0 ml-3">
+            <p className="font-display text-base font-bold text-foreground">£{p.rent.toLocaleString()}</p>
+            <p className="text-[10px] text-muted-foreground">/month</p>
+          </div>
+        </div>
+
+        {/* Tenant row */}
+        <div className="flex items-center gap-2">
+          {hmoTenants ? (
+            <>
+              <div className="flex -space-x-1.5">
+                {hmoTenants.slice(0, 3).map((ht) => (
+                  <img key={ht.id} src={ht.avatarUrl} alt={ht.name} className="w-6 h-6 rounded-full object-cover ring-2 ring-card" />
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground">{hmoTenants.length} tenants</span>
+            </>
+          ) : ti ? (
+            <>
+              <img src={ti.avatarUrl} alt={ti.name} className="w-6 h-6 rounded-full object-cover ring-1 ring-border" />
+              <span className="text-xs text-muted-foreground">{ti.name}</span>
+            </>
           ) : (
-            <div className="w-full h-full bg-secondary flex items-center justify-center">
-              <Building2 className="w-7 h-7 text-muted-foreground/40" />
+            <>
+              <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
+                <User className="w-3 h-3 text-muted-foreground" />
+              </div>
+              <span className="text-xs text-muted-foreground">Vacant</span>
+            </>
+          )}
+          {pr.rating > 0 && (
+            <div className="flex items-center gap-1 ml-auto">
+              <Star className="w-3 h-3 text-warning" fill="currentColor" />
+              <span className="text-xs font-semibold text-foreground">{pr.rating}</span>
             </div>
           )}
         </div>
 
-        {/* Content */}
-        <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
-          <div>
-            {/* Address + rating */}
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="text-sm font-bold text-foreground truncate leading-tight">
-                {p.address.split(",")[0]}
-              </h4>
-              {pr.rating > 0 && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <Star className="w-3 h-3 text-warning" fill="currentColor" />
-                  <span className="text-xs font-bold text-foreground">{pr.rating}</span>
-                </div>
-              )}
-            </div>
+        {/* Status chips */}
+        {missedCount > 0 && (
+          <span className="inline-flex text-[10px] font-semibold text-danger bg-danger-muted rounded-full px-2 py-0.5">
+            {missedCount} missed payment{missedCount > 1 ? "s" : ""}
+          </span>
+        )}
 
-            {/* Tenant */}
-            <div className="flex items-center gap-2 mb-3">
-              {hmoTenants ? (
-                <>
-                  <div className="flex -space-x-1.5">
-                    {hmoTenants.slice(0, 3).map((ht) => (
-                      <img key={ht.id} src={ht.avatarUrl} alt={ht.name} className="w-5 h-5 rounded-full object-cover border-2 border-card" />
-                    ))}
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">{hmoTenants.length} tenants</span>
-                  <span className="text-[9px] font-bold text-[#7c3aed] bg-[#f5f3ff] border border-[#ddd6fe] rounded-full px-2 py-0.5">HMO</span>
-                </>
-              ) : (
-                <>
-                  {ti ? (
-                    <img src={ti.avatarUrl} alt={ti.name} className="w-5 h-5 rounded-full object-cover border border-border" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center">
-                      <User className="w-3 h-3 text-muted-foreground" />
-                    </div>
-                  )}
-                  <span className="text-xs text-muted-foreground font-medium">{ti ? ti.name : "Vacant"}</span>
-                </>
-              )}
-            </div>
-
-            {/* Status chips */}
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {p.status === "active" && (
-                <span className="text-[10px] font-semibold text-success bg-success-muted border border-success/20 rounded-full px-2 py-0.5">Active</span>
-              )}
-              {missedCount > 0 && (
-                <span className="text-[10px] font-semibold text-danger bg-danger-muted border border-danger/20 rounded-full px-2 py-0.5">
-                  {missedCount} missed
-                </span>
-              )}
-              {hasHigh && (
-                <span className="text-[10px] font-semibold text-danger bg-danger-muted border border-danger/20 rounded-full px-2 py-0.5">
-                  Action required
-                </span>
-              )}
-            </div>
+        {/* Compliance bar */}
+        <div className="pt-2 border-t border-border">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+              {curPhaseName}
+            </span>
+            <span className="text-[11px] font-bold" style={{ color: getRAGColor(pct) }}>
+              {pct}%
+            </span>
           </div>
-
-          {/* Compliance bar */}
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
-              {p.status === "vacant" ? "Not started" : curPhaseName}
-            </span>
-            <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${pct}%`, backgroundColor: getRAGColor(pct) }}
-              />
-            </div>
-            <span className="text-[10px] font-bold shrink-0" style={{ color: getRAGColor(pct) }}>
-              {p.status === "vacant" ? "—" : `${pct}%`}
-            </span>
+          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${pct}%`, backgroundColor: getRAGColor(pct) }}
+            />
           </div>
         </div>
 
-        {/* Right: Rent + CTA */}
-        <div className="w-24 shrink-0 p-4 flex flex-col items-end justify-between">
-          <div className="text-right">
-            {p.rent > 0 ? (
-              <>
-                <p className="text-base font-black text-foreground leading-none">£{p.rent.toLocaleString()}</p>
-                <p className="text-[9px] text-muted-foreground font-medium mt-0.5">/month</p>
-              </>
-            ) : (
-              <span className="text-xs text-muted-foreground">—</span>
-            )}
-          </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); onSelect(); }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-landlord text-landlord-foreground text-[11px] font-semibold hover:brightness-110 transition-all"
-          >
-            View <ArrowRight className="w-3 h-3" />
-          </button>
-        </div>
+        {/* CTA */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onSelect(); }}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-secondary hover:bg-primary hover:text-primary-foreground text-foreground text-xs font-semibold transition-all"
+        >
+          View details <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
     </motion.div>
   );
