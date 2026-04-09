@@ -1,14 +1,14 @@
 import { cn } from "@/lib/utils";
 import {
   Building2, User, Star, AlertTriangle, Plus,
-  TrendingUp, MapPin, ChevronRight,
+  MapPin, ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { StarRating } from "./StarRating";
 import { ComplianceDonut } from "./ComplianceDonut";
 import {
   TENANT_INFO, HMO_TENANTS, PROP_PHOTOS,
-  PROP_RATINGS, PAYMENTS_BY_PROP, LANDLORD_PROFILE,
+  PROP_RATINGS, PAYMENTS_BY_PROP,
   VAULT_INIT, TASK_DATA, PHASES,
   type Property, type VaultDoc,
 } from "@/data/constants";
