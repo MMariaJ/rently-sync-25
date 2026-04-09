@@ -316,54 +316,54 @@ function OverviewTab({
           )}
         </div>
 
-        <div className="col-span-2 space-y-5">
-          <div className="bg-card rounded-xl border border-border p-5">
-            <h3 className="font-display text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-              <CalendarClock className="w-3.5 h-3.5 text-warning" />
-              Upcoming Deadlines
-            </h3>
-            {deadlines.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-3">No upcoming deadlines</p>
-            ) : (
-              <div className="space-y-1.5">
-                {deadlines.slice(0, 4).map((d, i) => (
-                  <div key={i} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg bg-secondary/40">
-                    <Clock className={cn("w-3 h-3 shrink-0", d.days <= 90 ? "text-warning" : "text-muted-foreground")} />
-                    <span className="text-xs font-medium text-foreground flex-1 truncate">{d.label}</span>
-                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
-                      d.status === "expired" ? "text-danger bg-danger-muted" :
-                      d.days <= 90 ? "text-warning bg-warning-muted" : "text-muted-foreground bg-secondary"
-                    )}>{d.status === "expired" ? "Expired" : `${d.days}d`}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Deadlines + Payments — side by side */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-card rounded-xl border border-border p-4">
+          <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
+            <CalendarClock className="w-3.5 h-3.5 text-warning" />
+            Upcoming Deadlines
+          </h3>
+          {deadlines.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-3">No upcoming deadlines</p>
+          ) : (
+            <div className="space-y-1.5">
+              {deadlines.slice(0, 4).map((d, i) => (
+                <div key={i} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg bg-secondary/40">
+                  <Clock className={cn("w-3 h-3 shrink-0", d.days <= 90 ? "text-warning" : "text-muted-foreground")} />
+                  <span className="text-xs font-medium text-foreground flex-1 truncate">{d.label}</span>
+                  <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
+                    d.status === "expired" ? "text-danger bg-danger-muted" :
+                    d.days <= 90 ? "text-warning bg-warning-muted" : "text-muted-foreground bg-secondary"
+                  )}>{d.status === "expired" ? "Expired" : `${d.days}d`}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-          <div className="bg-card rounded-xl border border-border p-5">
-            <h3 className="font-display text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-              <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
-              Payments
-            </h3>
-            {recurring.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-3">No payments set up</p>
-            ) : (
-              <div className="space-y-1.5">
-                {recurring.slice(0, 3).map((rp) => (
-                  <div key={rp.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-secondary/40">
-                    <span className="text-xs font-medium text-foreground truncate flex-1 mr-2">{rp.label}</span>
-                    <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
-                      rp.status === "paid" ? "text-success bg-success-muted" :
-                      rp.status === "overdue" ? "text-danger bg-danger-muted" : "text-warning bg-warning-muted"
-                    )}>{rp.status === "paid" ? "Paid" : rp.status === "overdue" ? "Overdue" : "Due soon"}</span>
-                  </div>
-                ))}
-                {recurring.length > 3 && (
-                  <p className="text-[10px] text-primary font-semibold pl-2 cursor-pointer hover:underline">+{recurring.length - 3} more →</p>
-                )}
-              </div>
-            )}
-          </div>
+        <div className="bg-card rounded-xl border border-border p-4">
+          <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
+            <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
+            Payments
+          </h3>
+          {recurring.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-3">No payments set up</p>
+          ) : (
+            <div className="space-y-1.5">
+              {recurring.slice(0, 3).map((rp) => (
+                <div key={rp.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-secondary/40">
+                  <span className="text-xs font-medium text-foreground truncate flex-1 mr-2">{rp.label}</span>
+                  <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
+                    rp.status === "paid" ? "text-success bg-success-muted" :
+                    rp.status === "overdue" ? "text-danger bg-danger-muted" : "text-warning bg-warning-muted"
+                  )}>{rp.status === "paid" ? "Paid" : rp.status === "overdue" ? "Overdue" : "Due soon"}</span>
+                </div>
+              ))}
+              {recurring.length > 3 && (
+                <p className="text-[10px] text-primary font-semibold pl-2 cursor-pointer hover:underline">+{recurring.length - 3} more →</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
