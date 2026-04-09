@@ -1,10 +1,11 @@
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Lock, MessageSquare,
-  ClipboardList, LogIn, Calendar, PackageOpen, CheckCircle,
+  ClipboardList, LogIn, Calendar,
   FileText, Upload, ChevronRight, Eye, EyeOff,
+  AlertTriangle,
 } from "lucide-react";
 import {
   PHASES, TASK_DATA, VAULT_INIT,
@@ -17,215 +18,181 @@ interface TasksTabProps {
   allVaults: Record<string, VaultDoc[]>;
 }
 
-const PHASE_ICONS = [ClipboardList, LogIn, Calendar, PackageOpen, CheckCircle];
+// Only the active tenancy phases (not Move-Out / Post-Tenancy)
+const ACTIVE_PHASES = ["Pre-Move-In", "Move-In", "During Tenancy"] as const;
+type ActivePhase = typeof ACTIVE_PHASES[number];
 
-function getVisiblePhases(property: Property, isDone: (t: TaskItem) => boolean) {
-  return PHASES.map((ph, i) => {
-    const tasks = (TASK_DATA["landlord"][ph] || []).filter(
-      (t) => !t.isContractUpload && !t.isContractSign && (!t.hmoOnly || property.isHmo)
-    );
-    const isLaterPhase = i >= 3;
-    const hasIncompleteTasks = tasks.some(t => !isDone(t));
-    return { phase: ph, index: i, visible: !isLaterPhase || hasIncompleteTasks, tasks };
-  }).filter(p => p.visible);
-}
+const PHASE_META: Record<ActivePhase, { icon: typeof ClipboardList; color: string }> = {
+  "Pre-Move-In": { icon: ClipboardList, color: "text-primary" },
+  "Move-In": { icon: LogIn, color: "text-info" },
+  "During Tenancy": { icon: Calendar, color: "text-success" },
+};
 
 export function TasksTab({ property: p, completed, allVaults }: TasksTabProps) {
   const vault = allVaults[p.id] || VAULT_INIT;
   const isDocUp = (n: string) => vault.some(d => d.name === n && d.status === "uploaded");
   const isDone = (t: TaskItem) => !!completed[`${p.id}_${t.id}`] || !!(t.vaultDoc && isDocUp(t.vaultDoc));
 
-  const visiblePhases = getVisiblePhases(p, isDone);
+  const phaseTasks = (phase: string) =>
+    (TASK_DATA["landlord"][phase] || []).filter(
+      (t) => !t.isContractUpload && !t.isContractSign && (!t.hmoOnly || p.isHmo)
+    );
 
-  // Find first phase with incomplete tasks
-  const currentPhaseVIdx = visiblePhases.findIndex(vp => vp.tasks.some(t => !isDone(t)));
+  // Find the current active phase (first with incomplete tasks)
+  const currentPhase = useMemo(() => {
+    for (const ph of ACTIVE_PHASES) {
+      const tasks = phaseTasks(ph);
+      if (tasks.some(t => !isDone(t))) return ph;
+    }
+    return "During Tenancy" as ActivePhase; // all done
+  }, [p, completed, allVaults]);
 
-  const [activePhaseIdx, setActivePhaseIdx] = useState(Math.max(currentPhaseVIdx, 0));
+  const currentTasks = phaseTasks(currentPhase);
+  const pendingTasks = currentTasks.filter(t => !isDone(t));
+  const completedTasks = currentTasks.filter(t => isDone(t));
+
+  // Overdue tasks from previous phases
+  const overdueTasks = useMemo(() => {
+    const currentIdx = ACTIVE_PHASES.indexOf(currentPhase);
+    const overdue: { phase: string; task: TaskItem }[] = [];
+    for (let i = 0; i < currentIdx; i++) {
+      const tasks = phaseTasks(ACTIVE_PHASES[i]);
+      tasks.filter(t => !isDone(t)).forEach(t => overdue.push({ phase: ACTIVE_PHASES[i], task: t }));
+    }
+    return overdue;
+  }, [currentPhase, p, completed, allVaults]);
+
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
-  const [hideCompleted, setHideCompleted] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
 
-  const activePhaseData = visiblePhases[activePhaseIdx] || visiblePhases[0];
-  const phaseTasks = activePhaseData?.tasks || [];
+  const selectedTaskData = currentTasks.find(t => t.id === selectedTask)
+    || overdueTasks.find(o => o.task.id === selectedTask)?.task;
 
-  const filteredTasks = phaseTasks.filter(t => {
-    if (hideCompleted && isDone(t)) return false;
-    return true;
-  });
-
-  const completedCount = phaseTasks.filter(isDone).length;
-
-  const doneCounts = visiblePhases.map(({ tasks }) => {
-    const done = tasks.filter(isDone).length;
-    return { total: tasks.length, done, allDone: tasks.length > 0 && done === tasks.length };
-  });
-
-  const selectedTaskData = phaseTasks.find(t => t.id === selectedTask);
-
-  // Total progress
-  const totalTasks = visiblePhases.reduce((s, vp) => s + vp.tasks.length, 0);
-  const totalDone = visiblePhases.reduce((s, vp) => s + vp.tasks.filter(isDone).length, 0);
-  const progressPct = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
+  const Icon = PHASE_META[currentPhase].icon;
+  const totalActive = pendingTasks.length + overdueTasks.length;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-      {/* Phase stepper — visual journey */}
-      <div className="bg-card rounded-xl border border-border p-5">
-        {/* Progress bar */}
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-semibold text-foreground">Tenancy progress</span>
-          <span className="text-[11px] text-muted-foreground font-medium">{totalDone}/{totalTasks} tasks · {progressPct}%</span>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+      {/* Current phase header */}
+      <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-4">
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10", PHASE_META[currentPhase].color)}>
+          <Icon className="w-5 h-5" />
         </div>
-
-        <div className="relative mb-6">
-          {/* Track */}
-          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-primary rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            />
-          </div>
-
-          {/* Phase dots on the track */}
-          <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex justify-between px-1">
-            {visiblePhases.map((vp, i) => {
-              const { allDone } = doneCounts[i];
-              const isCurrent = i === activePhaseIdx;
-              const isPast = i < (currentPhaseVIdx >= 0 ? currentPhaseVIdx : 0);
-              return (
-                <button
-                  key={vp.phase}
-                  onClick={() => { setActivePhaseIdx(i); setSelectedTask(null); }}
-                  className={cn(
-                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all bg-card",
-                    allDone ? "border-success bg-success" :
-                    isCurrent ? "border-primary ring-4 ring-primary/10" :
-                    isPast ? "border-primary" : "border-border"
-                  )}
-                >
-                  {allDone && <Check className="w-2.5 h-2.5 text-success-foreground" />}
-                </button>
-              );
-            })}
-          </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-bold text-foreground">{currentPhase}</h3>
+          <p className="text-[11px] text-muted-foreground">
+            {pendingTasks.length} task{pendingTasks.length !== 1 ? "s" : ""} remaining
+            {overdueTasks.length > 0 && (
+              <span className="text-warning"> · {overdueTasks.length} overdue from earlier</span>
+            )}
+          </p>
         </div>
-
-        {/* Phase labels */}
-        <div className="flex justify-between">
-          {visiblePhases.map((vp, i) => {
-            const Icon = PHASE_ICONS[vp.index];
-            const { done, total, allDone } = doneCounts[i];
-            const isCurrent = i === activePhaseIdx;
+        {/* Mini phase indicator */}
+        <div className="flex items-center gap-1.5">
+          {ACTIVE_PHASES.map((ph) => {
+            const tasks = phaseTasks(ph);
+            const allDone = tasks.length > 0 && tasks.every(isDone);
+            const isCurrent = ph === currentPhase;
             return (
-              <button
-                key={vp.phase}
-                onClick={() => { setActivePhaseIdx(i); setSelectedTask(null); }}
+              <div
+                key={ph}
                 className={cn(
-                  "flex flex-col items-center gap-1 transition-all group",
-                  isCurrent ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  "rounded-full transition-all",
+                  isCurrent ? "w-6 h-2 bg-primary" :
+                  allDone ? "w-2 h-2 bg-success" :
+                  "w-2 h-2 bg-border"
                 )}
-              >
-                <Icon className={cn("w-3.5 h-3.5", allDone ? "text-success" : isCurrent ? "text-primary" : "")} />
-                <span className={cn("text-[10px] font-medium leading-tight text-center", isCurrent && "font-semibold")}>
-                  {vp.phase}
-                </span>
-                <span className="text-[9px] opacity-60">{done}/{total}</span>
-              </button>
+              />
             );
           })}
         </div>
       </div>
 
-      {/* 2:1 split — Task list | Detail panel */}
-      <div className="grid grid-cols-3 gap-4" style={{ minHeight: 320 }}>
+      {/* 2:1 split */}
+      <div className="grid grid-cols-3 gap-4" style={{ minHeight: 300 }}>
         {/* Left — Task list */}
-        <div className="col-span-2 bg-card rounded-xl border border-border overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center gap-3">
-            <h3 className="font-display text-xs font-bold text-foreground flex-1">
-              {activePhaseData?.phase}
-            </h3>
-
-            {/* Hide completed toggle */}
-            {completedCount > 0 && (
-              <button
-                onClick={() => setHideCompleted(!hideCompleted)}
-                className={cn(
-                  "flex items-center gap-1 text-[10px] font-medium transition-colors px-2 py-1 rounded-md",
-                  hideCompleted ? "text-muted-foreground hover:text-foreground" : "text-success bg-success-muted"
-                )}
-              >
-                {hideCompleted ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                {hideCompleted ? `${completedCount} hidden` : "All shown"}
-              </button>
-            )}
-          </div>
-
-          {filteredTasks.length === 0 ? (
-            <div className="p-8 text-center">
-              <Check className="w-6 h-6 text-success mx-auto mb-2" />
-              <p className="text-xs font-medium text-muted-foreground">
-                {completedCount === phaseTasks.length ? "All tasks complete" : "No pending tasks"}
-              </p>
-              {hideCompleted && completedCount > 0 && (
-                <button
-                  onClick={() => setHideCompleted(false)}
-                  className="text-[10px] text-primary font-medium mt-2 hover:underline"
-                >
-                  Show {completedCount} completed
-                </button>
+        <div className="col-span-2 space-y-3">
+          {/* Pending tasks */}
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="divide-y divide-border">
+              {pendingTasks.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  done={false}
+                  locked={!p.contractUploaded && !!task.blocked}
+                  selected={selectedTask === task.id}
+                  onSelect={() => setSelectedTask(selectedTask === task.id ? null : task.id)}
+                />
+              ))}
+              {pendingTasks.length === 0 && (
+                <div className="p-6 text-center">
+                  <Check className="w-5 h-5 text-success mx-auto mb-1.5" />
+                  <p className="text-xs font-medium text-muted-foreground">All tasks complete for this phase</p>
+                </div>
               )}
             </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {filteredTasks.map((task) => {
-                const done = isDone(task);
-                const isSelected = selectedTask === task.id;
-                const locked = !p.contractUploaded && task.blocked;
+          </div>
 
-                return (
-                  <button
+          {/* Overdue from previous phases */}
+          {overdueTasks.length > 0 && (
+            <div className="bg-card rounded-xl border border-warning/20 overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-warning/15 flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-warning" />
+                <span className="text-[11px] font-semibold text-foreground">Overdue from earlier phases</span>
+                <span className="text-[9px] text-warning font-semibold ml-auto">{overdueTasks.length}</span>
+              </div>
+              <div className="divide-y divide-border/50">
+                {overdueTasks.map(({ phase, task }) => (
+                  <TaskRow
                     key={task.id}
-                    onClick={() => setSelectedTask(isSelected ? null : task.id)}
-                    disabled={locked}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 text-left transition-all",
-                      isSelected ? "bg-primary/5 border-l-2 border-l-primary" : "border-l-2 border-l-transparent hover:bg-secondary/30",
-                      done && "opacity-50"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-4 h-4 rounded border-2 flex items-center justify-center shrink-0",
-                      done ? "bg-success border-success" :
-                      locked ? "bg-secondary border-border" : "border-border"
-                    )}>
-                      {done && <Check className="w-2.5 h-2.5 text-success-foreground" />}
-                      {locked && <Lock className="w-2.5 h-2.5 text-muted-foreground/50" />}
-                    </div>
-
-                    <span className={cn(
-                      "text-xs font-medium flex-1",
-                      done ? "text-muted-foreground line-through" : locked ? "text-muted-foreground" : "text-foreground"
-                    )}>
-                      {task.label}
-                    </span>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={cn(
-                        "text-[9px] font-semibold rounded-full px-1.5 py-0.5",
-                        task.type === "legal" ? "text-danger bg-danger-muted" : "text-info bg-info-muted"
-                      )}>
-                        {task.type === "legal" ? "Legal" : "Suggested"}
-                      </span>
-                      {task.vaultDoc && <FileText className="w-3 h-3 text-primary/60" />}
-                      {task.hasChat && <MessageSquare className="w-3 h-3 text-success/60" />}
-                      <ChevronRight className={cn("w-3 h-3 text-muted-foreground/30 transition-transform", isSelected && "rotate-90")} />
-                    </div>
-                  </button>
-                );
-              })}
+                    task={task}
+                    done={false}
+                    locked={!p.contractUploaded && !!task.blocked}
+                    selected={selectedTask === task.id}
+                    onSelect={() => setSelectedTask(selectedTask === task.id ? null : task.id)}
+                    phaseLabel={phase}
+                  />
+                ))}
+              </div>
             </div>
           )}
+
+          {/* Completed — collapsible */}
+          {completedTasks.length > 0 && (
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="w-full flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showCompleted ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+              {completedTasks.length} completed task{completedTasks.length !== 1 ? "s" : ""}
+            </button>
+          )}
+
+          <AnimatePresence>
+            {showCompleted && completedTasks.length > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-card rounded-xl border border-border overflow-hidden divide-y divide-border/50">
+                  {completedTasks.map(task => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      done={true}
+                      locked={false}
+                      selected={selectedTask === task.id}
+                      onSelect={() => setSelectedTask(selectedTask === task.id ? null : task.id)}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Right — Detail panel */}
@@ -251,13 +218,61 @@ export function TasksTab({ property: p, completed, allVaults }: TasksTabProps) {
               >
                 <ClipboardList className="w-8 h-8 text-muted-foreground/20 mb-3" />
                 <p className="text-xs font-medium text-muted-foreground">Select a task</p>
-                <p className="text-[10px] text-muted-foreground/50 mt-1">Click any item on the left</p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+/* ─── Task Row ─── */
+function TaskRow({ task, done, locked, selected, onSelect, phaseLabel }: {
+  task: TaskItem; done: boolean; locked: boolean; selected: boolean; onSelect: () => void; phaseLabel?: string;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      disabled={locked}
+      className={cn(
+        "w-full flex items-center gap-3 px-4 py-3 text-left transition-all",
+        selected ? "bg-primary/5 border-l-2 border-l-primary" : "border-l-2 border-l-transparent hover:bg-secondary/20",
+        done && "opacity-45"
+      )}
+    >
+      <div className={cn(
+        "w-4 h-4 rounded border-2 flex items-center justify-center shrink-0",
+        done ? "bg-success border-success" : locked ? "bg-secondary border-border" : "border-border"
+      )}>
+        {done && <Check className="w-2.5 h-2.5 text-success-foreground" />}
+        {locked && <Lock className="w-2.5 h-2.5 text-muted-foreground/50" />}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <span className={cn(
+          "text-xs font-medium block truncate",
+          done ? "text-muted-foreground line-through" : locked ? "text-muted-foreground" : "text-foreground"
+        )}>
+          {task.label}
+        </span>
+        {phaseLabel && (
+          <span className="text-[9px] text-warning font-medium">{phaseLabel}</span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className={cn(
+          "text-[9px] font-semibold rounded-full px-1.5 py-0.5",
+          task.type === "legal" ? "text-danger bg-danger-muted" : "text-info bg-info-muted"
+        )}>
+          {task.type === "legal" ? "Legal" : "Suggested"}
+        </span>
+        {task.vaultDoc && <FileText className="w-3 h-3 text-primary/50" />}
+        {task.hasChat && <MessageSquare className="w-3 h-3 text-success/50" />}
+        <ChevronRight className={cn("w-3 h-3 text-muted-foreground/30 transition-transform", selected && "rotate-90")} />
+      </div>
+    </button>
   );
 }
 
@@ -281,7 +296,6 @@ function TaskDetailPanel({ task, done, locked }: { task: TaskItem; done: boolean
       </div>
 
       <h4 className="font-display text-sm font-bold text-foreground leading-snug">{task.label}</h4>
-
       <p className="text-xs text-muted-foreground leading-relaxed">{task.detail}</p>
 
       {(task.vaultDoc || task.hasChat) && (
