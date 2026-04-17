@@ -129,23 +129,30 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
             const pct = getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo);
             const pr = PROP_RATINGS[p.id] || { rating: 0, count: 0 };
             const propAlerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
-            // Show only alerts that warrant attention; cap at 2 most important.
             const keyAlerts = propAlerts
               .filter((a) => isCritical(a) || a.severity === "high")
               .sort((a, b) => (isCritical(a) === isCritical(b) ? 0 : isCritical(a) ? -1 : 1))
               .slice(0, 2);
             const hasCritical = keyAlerts.some(isCritical);
+            const accentClass = hasCritical
+              ? "bg-danger"
+              : keyAlerts.length > 0
+              ? "bg-warning"
+              : "bg-success";
+
+            const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
+            const nextDeadline = Object.entries(validity)
+              .filter(([, v]) => v.status === "expired" || (v.days > 0 && v.days <= 365))
+              .sort(([, a], [, b]) => a.days - b.days)[0];
 
             return (
               <button
                 key={p.id}
                 onClick={() => onSelectProperty(p.id)}
-                className={cn(
-                  "flex flex-col gap-3 p-4 rounded-xl border bg-card text-left transition-all hover:shadow-card hover:-translate-y-0.5 group",
-                  hasCritical ? "border-danger/25" : keyAlerts.length > 0 ? "border-warning/25" : "border-border"
-                )}
+                className="relative flex flex-col gap-3 p-4 pl-5 rounded-xl border border-border bg-card text-left transition-all hover:shadow-card hover:-translate-y-0.5 hover:border-border/80 group overflow-hidden"
               >
-                {/* Header: address + chevron */}
+                <span className={cn("absolute left-0 top-0 bottom-0 w-1", accentClass)} aria-hidden />
+
                 <div className="flex items-start gap-3">
                   <ComplianceDonut percentage={pct} size={40} strokeWidth={3} showLabel={false} />
                   <div className="flex-1 min-w-0">
@@ -159,7 +166,6 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
                   <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-foreground transition-colors shrink-0 mt-1" />
                 </div>
 
-                {/* Compliance bar */}
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: getRAGColor(pct) }} />
@@ -167,10 +173,9 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
                   <span className="text-[10px] font-bold tabular-nums" style={{ color: getRAGColor(pct) }}>{pct}%</span>
                 </div>
 
-                {/* Key alerts — colour-coded dot + text, max 2 */}
-                <div className="space-y-1 min-h-[44px]">
+                <div className="space-y-1 min-h-[40px]">
                   {keyAlerts.length === 0 ? (
-                    <div className="flex items-center gap-1.5 text-[11px] text-success font-medium">
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                       <span className="w-1.5 h-1.5 rounded-full bg-success" />
                       All clear
                     </div>
@@ -183,15 +188,30 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
                             "w-1.5 h-1.5 rounded-full mt-1.5 shrink-0",
                             critical ? "bg-danger" : "bg-warning"
                           )} />
-                          <p className={cn(
-                            "text-[11px] leading-snug line-clamp-2",
-                            critical ? "text-danger font-medium" : "text-warning-foreground/90"
-                          )}>
+                          <p className="text-[11px] leading-snug line-clamp-2 text-foreground/80">
                             {a.text}
                           </p>
                         </div>
                       );
                     })
+                  )}
+                </div>
+
+                <div className="pt-2 mt-auto border-t border-border/60 flex items-center gap-1.5">
+                  <CalendarClock className="w-3 h-3 text-muted-foreground shrink-0" />
+                  {nextDeadline ? (
+                    <>
+                      <span className="text-[10px] text-muted-foreground truncate flex-1">{nextDeadline[0]}</span>
+                      <span className={cn(
+                        "text-[10px] font-bold tabular-nums shrink-0",
+                        nextDeadline[1].status === "expired" ? "text-danger" :
+                        nextDeadline[1].days <= 90 ? "text-warning" : "text-muted-foreground"
+                      )}>
+                        {nextDeadline[1].status === "expired" ? "Overdue" : `${nextDeadline[1].days}d`}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">No upcoming deadlines</span>
                   )}
                 </div>
               </button>
