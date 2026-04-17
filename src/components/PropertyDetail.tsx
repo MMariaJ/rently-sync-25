@@ -381,20 +381,46 @@ function OverviewTab({
           tone={tasksTone}
         />
       </div>
-
+    </motion.div>
   );
 }
 
-function QuickStat({ icon, label, value, color, bgColor }: {
-  icon: React.ReactNode; label: string; value: string; color: string; bgColor: string;
+function KpiCard({
+  icon, label, value, subtitle, tone, detail, cta,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  subtitle: string;
+  tone: "danger" | "warning" | "success" | "muted";
+  detail?: string;
+  cta?: string;
 }) {
+  const toneStyles = {
+    danger: { bg: "bg-danger-muted", text: "text-danger", value: "text-danger" },
+    warning: { bg: "bg-warning-muted", text: "text-warning", value: "text-foreground" },
+    success: { bg: "bg-success-muted", text: "text-success", value: "text-success" },
+    muted: { bg: "bg-secondary", text: "text-muted-foreground", value: "text-foreground" },
+  }[tone];
+
   return (
-    <div className="bg-card rounded-xl border border-border px-3.5 py-3">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
-        <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", bgColor, color)}>{icon}</div>
+    <div className="bg-card rounded-xl border border-border p-4 shadow-card">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</span>
+        <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", toneStyles.bg, toneStyles.text)}>
+          {icon}
+        </div>
       </div>
-      <p className={cn("font-display text-lg font-bold", color)}>{value}</p>
+      <p className={cn("font-display text-2xl font-bold leading-tight", toneStyles.value)}>{value}</p>
+      <p className="text-[11px] text-muted-foreground mt-1">{subtitle}</p>
+      {detail && (
+        <p className="text-[11px] text-foreground mt-2 pt-2 border-t border-border truncate">{detail}</p>
+      )}
+      {cta && (
+        <button className="text-[11px] font-semibold text-primary hover:underline mt-2 inline-flex items-center gap-1">
+          {cta} <ChevronRight className="w-3 h-3" />
+        </button>
+      )}
     </div>
   );
 }
