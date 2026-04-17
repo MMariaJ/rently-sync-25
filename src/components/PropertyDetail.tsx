@@ -206,90 +206,37 @@ function OverviewTab({
   const paidCount = recurring.filter((r) => r.status === "paid").length;
   const overdueCount = recurring.filter((r) => r.status === "overdue").length;
 
+  // KPI summary values
+  const actionItemsCount = combinedItems.length;
+  const actionTone: "danger" | "warning" | "success" =
+    criticalCount > 0 ? "danger" : actionItemsCount > 0 ? "warning" : "success";
+  const actionSubtitle =
+    actionItemsCount === 0
+      ? "All clear"
+      : criticalCount > 0
+        ? `${criticalCount} need${criticalCount === 1 ? "s" : ""} attention`
+        : `${actionItemsCount} upcoming`;
+  const nextItem = combinedItems[0];
+
+  const paymentsTone: "danger" | "warning" | "success" | "muted" =
+    !paymentsSetup ? "muted" : overdueCount > 0 ? "danger" : "success";
+  const paymentsTitle = !paymentsSetup
+    ? "Not set up"
+    : overdueCount > 0
+      ? `${overdueCount} missed`
+      : "All clear";
+  const paymentsSubtitle = !paymentsSetup
+    ? "Set up rent collection"
+    : `£${p.rent.toLocaleString()} / mo · ${paidCount} paid`;
+
+  const pendingCount = pendingTasks.length;
+  const tasksTone: "warning" | "success" = pendingCount > 0 ? "warning" : "success";
+  const tasksSubtitle = pendingCount === 0
+    ? "Stage complete"
+    : `In ${activePhase}`;
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-5">
-      {/* Top summary row: Alerts & Deadlines + Payments */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Combined Alerts & Deadlines */}
-        <div className="lg:col-span-2 bg-card rounded-xl border border-border p-4 shadow-card">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <AlertTriangle className={cn("w-3.5 h-3.5", criticalCount > 0 ? "text-danger" : combinedItems.length > 0 ? "text-warning" : "text-success")} />
-              Alerts & Upcoming Deadlines
-            </h3>
-            {combinedItems.length > 0 && (
-              <span className={cn(
-                "text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1.5",
-                criticalCount > 0 ? "bg-danger text-primary-foreground" : "bg-warning text-warning-foreground"
-              )}>
-                {combinedItems.length}
-              </span>
-            )}
-          </div>
-          {combinedItems.length === 0 ? (
-            <div className="flex items-center gap-2 py-3 justify-center">
-              <Check className="w-3.5 h-3.5 text-success" />
-              <p className="text-[11px] text-success font-medium">All clear — nothing due</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {combinedItems.slice(0, 6).map((item, i) => (
-                <div key={i} className={cn(
-                  "flex items-center gap-2 p-2 rounded-lg border",
-                  item.tone === "danger" ? "bg-danger/5 border-danger/15" :
-                  item.tone === "warning" ? "bg-warning/5 border-warning/15" :
-                  "bg-secondary/40 border-border"
-                )}>
-                  <div className={cn("shrink-0",
-                    item.tone === "danger" ? "text-danger" :
-                    item.tone === "warning" ? "text-warning" : "text-muted-foreground"
-                  )}>
-                    {item.icon}
-                  </div>
-                  <p className="text-[11px] font-medium text-foreground leading-snug flex-1 min-w-0 truncate">{item.text}</p>
-                  {item.meta && (
-                    <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0",
-                      item.tone === "danger" ? "text-danger bg-danger-muted" :
-                      item.tone === "warning" ? "text-warning bg-warning-muted" :
-                      "text-muted-foreground bg-secondary"
-                    )}>{item.meta}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Payments overview */}
-        <div className="bg-card rounded-xl border border-border p-4 shadow-card">
-          <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-            <CreditCard className="w-3.5 h-3.5 text-primary" />
-            Payments
-          </h3>
-          {!paymentsSetup ? (
-            <div className="flex flex-col items-start gap-2 py-1">
-              <p className="text-xs text-muted-foreground leading-snug">
-                No payments set up yet for this property.
-              </p>
-              <button className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
-                Set up payments <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-display text-2xl font-bold text-foreground">£{p.rent.toLocaleString()}</span>
-                <span className="text-[10px] text-muted-foreground">/ month</span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px]">
-                {paidCount > 0 && <span className="text-success font-semibold">{paidCount} paid</span>}
-                {overdueCount > 0 && <><span className="text-muted-foreground">·</span><span className="text-danger font-semibold">{overdueCount} overdue</span></>}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Hero row: Tenant + Property image (2/3) + Lifecycle (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Tenant + property hero */}
@@ -408,21 +355,72 @@ function OverviewTab({
         </div>
       </div>
 
-
+      {/* Three KPI cards: Action Items · Payments · Pending Tasks */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <KpiCard
+          icon={<AlertTriangle className="w-4 h-4" />}
+          label="Action Items"
+          value={String(actionItemsCount)}
+          subtitle={actionSubtitle}
+          tone={actionTone}
+          detail={nextItem ? `Next: ${nextItem.text}${nextItem.meta ? ` · ${nextItem.meta}` : ""}` : undefined}
+        />
+        <KpiCard
+          icon={<CreditCard className="w-4 h-4" />}
+          label="Payments"
+          value={paymentsTitle}
+          subtitle={paymentsSubtitle}
+          tone={paymentsTone}
+          cta={!paymentsSetup ? "Set up" : undefined}
+        />
+        <KpiCard
+          icon={<CheckSquare className="w-4 h-4" />}
+          label="Pending Tasks"
+          value={String(pendingCount)}
+          subtitle={tasksSubtitle}
+          tone={tasksTone}
+        />
+      </div>
     </motion.div>
   );
 }
 
-function QuickStat({ icon, label, value, color, bgColor }: {
-  icon: React.ReactNode; label: string; value: string; color: string; bgColor: string;
+function KpiCard({
+  icon, label, value, subtitle, tone, detail, cta,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  subtitle: string;
+  tone: "danger" | "warning" | "success" | "muted";
+  detail?: string;
+  cta?: string;
 }) {
+  const toneStyles = {
+    danger: { bg: "bg-danger-muted", text: "text-danger", value: "text-danger" },
+    warning: { bg: "bg-warning-muted", text: "text-warning", value: "text-foreground" },
+    success: { bg: "bg-success-muted", text: "text-success", value: "text-success" },
+    muted: { bg: "bg-secondary", text: "text-muted-foreground", value: "text-foreground" },
+  }[tone];
+
   return (
-    <div className="bg-card rounded-xl border border-border px-3.5 py-3">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
-        <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", bgColor, color)}>{icon}</div>
+    <div className="bg-card rounded-xl border border-border p-4 shadow-card">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</span>
+        <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", toneStyles.bg, toneStyles.text)}>
+          {icon}
+        </div>
       </div>
-      <p className={cn("font-display text-lg font-bold", color)}>{value}</p>
+      <p className={cn("font-display text-2xl font-bold leading-tight", toneStyles.value)}>{value}</p>
+      <p className="text-[11px] text-muted-foreground mt-1">{subtitle}</p>
+      {detail && (
+        <p className="text-[11px] text-foreground mt-2 pt-2 border-t border-border truncate">{detail}</p>
+      )}
+      {cta && (
+        <button className="text-[11px] font-semibold text-primary hover:underline mt-2 inline-flex items-center gap-1">
+          {cta} <ChevronRight className="w-3 h-3" />
+        </button>
+      )}
     </div>
   );
 }
