@@ -1,19 +1,25 @@
 import { motion } from "framer-motion";
 import {
-  Building2, TrendingUp, AlertTriangle, Shield, CalendarDays,
-  ChevronRight, Star, Sparkles, Wallet,
+  Building2, TrendingUp, AlertTriangle, Shield,
+  ChevronRight, Star, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ComplianceDonut } from "./ComplianceDonut";
 import { StarRating } from "./StarRating";
-import { DeadlineCalendar, type DeadlineEvent } from "./DeadlineCalendar";
-import { IncomeExpensesChart } from "./IncomeExpensesChart";
 import {
   TENANT_INFO, HMO_TENANTS, VAULT_INIT,
-  LANDLORD_PROFILE, DOC_VALIDITY_BY_PROP, PROP_RATINGS,
+  LANDLORD_PROFILE, PROP_RATINGS,
   type Property, type VaultDoc,
 } from "@/data/constants";
 import { getPropertyAlerts, getComplianceForProperty, getRAGColor } from "@/data/helpers";
+
+// An alert is "critical" only when truly overdue / expired / missing.
+// "Expiring soon" lives on the property page, not the dashboard summary.
+const isCritical = (a: { text: string; severity: "high" | "medium" }) => {
+  if (a.severity !== "high") return false;
+  const t = a.text.toLowerCase();
+  return t.includes("overdue") || t.includes("expired") || t.includes("missing") || t.includes("required");
+};
 
 interface DashboardProps {
   portfolio: Property[];
