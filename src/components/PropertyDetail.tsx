@@ -245,149 +245,148 @@ function OverviewTab({
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-5">
-      {/* 2:1 split — Left: combined Tenant + Tenancy Stage; Right: KPI stack */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Combined Tenant + Tenancy Stage card */}
-        <div className="lg:col-span-2 bg-card rounded-xl border border-border overflow-hidden shadow-card flex flex-col">
-          {/* Tenant section */}
-          <div className="grid grid-cols-1 md:grid-cols-5">
-            {heroPhoto && (
-              <div className="md:col-span-2 relative h-40 md:h-auto bg-secondary">
-                <img src={heroPhoto.src} alt={p.address} className="absolute inset-0 w-full h-full object-cover" />
-              </div>
-            )}
-            <div className={cn("p-5", heroPhoto ? "md:col-span-3" : "md:col-span-5")}>
-              <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                <User className="w-3.5 h-3.5 text-primary" />
-                {hmoTenants ? `Tenants (${hmoTenants.length})` : "Tenant"}
-              </h3>
+      {/* KPI cards row — directly under the Overview submenu */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <KpiCard
+          icon={<AlertTriangle className="w-4 h-4" />}
+          label="Action Items"
+          value={String(actionItemsCount)}
+          subtitle={actionSubtitle}
+          tone={actionTone}
+          detail={nextItem ? `Next: ${nextItem.text}${nextItem.meta ? ` · ${nextItem.meta}` : ""}` : undefined}
+          calendarDates={deadlineDates}
+        />
+        <KpiCard
+          icon={<CreditCard className="w-4 h-4" />}
+          label="Payments"
+          value={paymentsTitle}
+          subtitle={paymentsSubtitle}
+          tone={paymentsTone}
+          cta={!paymentsSetup ? "Set up" : undefined}
+        />
+        <KpiCard
+          icon={<MessageSquare className="w-4 h-4" />}
+          label="Pending Messages"
+          value={String(pendingCount)}
+          subtitle={tasksSubtitle}
+          tone={tasksTone}
+        />
+      </div>
 
-              {hmoTenants ? (
-                <div className="space-y-2">
-                  {hmoTenants.map((ht: any) => (
-                    <div key={ht.id} className="flex items-center gap-3 py-2 px-2.5 rounded-lg bg-secondary/40">
-                      <img src={ht.avatarUrl} alt={ht.name} className="w-9 h-9 rounded-full object-cover ring-1 ring-border" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{ht.name}</p>
-                        <p className="text-[10px] text-muted-foreground">Since {ht.since}</p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Star className="w-3 h-3 text-warning" fill="currentColor" />
-                        <span className="text-xs font-bold text-foreground">{ht.rating}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : ti ? (
-                <div className="flex items-start gap-4">
-                  <img
-                    src={ti.avatarUrl}
-                    alt={ti.name}
-                    className="w-20 h-20 rounded-2xl object-cover ring-2 ring-border shadow-card shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-display text-lg font-bold text-foreground">{ti.name}</span>
-                      {ti.verified && (
-                        <span className="text-[9px] font-bold text-success bg-success-muted rounded-full px-1.5 py-0.5 inline-flex items-center gap-0.5">
-                          <Check className="w-2.5 h-2.5" /> Verified
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <StarRating rating={ti.rating} size={12} />
-                      <span className="text-xs font-bold text-foreground">{ti.rating}</span>
-                      <span className="text-[10px] text-muted-foreground">· Tenant since {ti.since}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No tenant assigned</p>
-              )}
-            </div>
-          </div>
+      {/* Combined Tenant + Tenancy Stage card (full width) */}
+      <div className="bg-card rounded-xl border border-border overflow-hidden shadow-card">
+        {/* Tenant section — name/details on the LEFT, image on the RIGHT */}
+        <div className="grid grid-cols-1 md:grid-cols-5">
+          <div className={cn("p-5", heroPhoto ? "md:col-span-3" : "md:col-span-5")}>
+            <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+              <User className="w-3.5 h-3.5 text-primary" />
+              {hmoTenants ? `Tenants (${hmoTenants.length})` : "Tenant"}
+            </h3>
 
-          {/* Visual divider between tenant and tenancy stage */}
-          <div className="border-t border-border" />
-
-          {/* Tenancy Stage section */}
-          <div className="p-5 flex-1">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <CheckSquare className="w-3.5 h-3.5 text-primary" />
-                Tenancy stage
-              </h3>
-              <span className="text-[9px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                {activePhase}
-              </span>
-            </div>
-
-            {(() => {
-              const idx = curPhaseIdx >= 0 ? curPhaseIdx : phaseProgress.length - 1;
-              const current = phaseProgress[idx];
-              const allComplete = curPhaseIdx < 0;
-              return (
-                <div>
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-9 h-9 rounded-full flex items-center justify-center shrink-0",
-                      allComplete ? "bg-success text-primary-foreground" : "bg-primary text-primary-foreground ring-4 ring-primary/15"
-                    )}>
-                      {allComplete ? <Check className="w-4 h-4" /> : <span className="text-sm font-bold">{idx + 1}</span>}
-                    </div>
+            {hmoTenants ? (
+              <div className="space-y-2">
+                {hmoTenants.map((ht: any) => (
+                  <div key={ht.id} className="flex items-center gap-3 py-2 px-2.5 rounded-lg bg-secondary/40">
+                    <img src={ht.avatarUrl} alt={ht.name} className="w-9 h-9 rounded-full object-cover ring-1 ring-border" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{allComplete ? "Complete" : current.name}</p>
-                      {!allComplete && current.total > 0 && (
-                        <p className="text-[11px] text-muted-foreground">{current.done}/{current.total} tasks done</p>
-                      )}
+                      <p className="text-sm font-semibold text-foreground truncate">{ht.name}</p>
+                      <p className="text-[10px] text-muted-foreground">Since {ht.since}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Star className="w-3 h-3 text-warning" fill="currentColor" />
+                      <span className="text-xs font-bold text-foreground">{ht.rating}</span>
                     </div>
                   </div>
-
-                  {!allComplete && pendingTasks.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-border space-y-1.5">
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Remaining in this stage</p>
-                      {pendingTasks.slice(0, 4).map((t: any) => (
-                        <div key={t.id} className="flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                          <p className="text-xs text-foreground leading-snug line-clamp-2">{t.label}</p>
-                        </div>
-                      ))}
-                      {pendingTasks.length > 4 && (
-                        <p className="text-[10px] text-primary font-semibold pt-1">+{pendingTasks.length - 4} more</p>
-                      )}
-                    </div>
-                  )}
+                ))}
+              </div>
+            ) : ti ? (
+              <div className="flex items-start gap-4">
+                <img
+                  src={ti.avatarUrl}
+                  alt={ti.name}
+                  className="w-20 h-20 rounded-2xl object-cover ring-2 ring-border shadow-card shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-display text-lg font-bold text-foreground">{ti.name}</span>
+                    {ti.verified && (
+                      <span className="text-[9px] font-bold text-success bg-success-muted rounded-full px-1.5 py-0.5 inline-flex items-center gap-0.5">
+                        <Check className="w-2.5 h-2.5" /> Verified
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <StarRating rating={ti.rating} size={12} />
+                    <span className="text-xs font-bold text-foreground">{ti.rating}</span>
+                    <span className="text-[10px] text-muted-foreground">· Tenant since {ti.since}</span>
+                  </div>
                 </div>
-              );
-            })()}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No tenant assigned</p>
+            )}
           </div>
+
+          {heroPhoto && (
+            <div className="md:col-span-2 relative h-40 md:h-auto bg-secondary order-first md:order-last">
+              <img src={heroPhoto.src} alt={p.address} className="absolute inset-0 w-full h-full object-cover" />
+            </div>
+          )}
         </div>
 
-        {/* Right column: stacked KPI cards */}
-        <div className="flex flex-col gap-4">
-          <KpiCard
-            icon={<AlertTriangle className="w-4 h-4" />}
-            label="Action Items"
-            value={String(actionItemsCount)}
-            subtitle={actionSubtitle}
-            tone={actionTone}
-            detail={nextItem ? `Next: ${nextItem.text}${nextItem.meta ? ` · ${nextItem.meta}` : ""}` : undefined}
-          />
-          <KpiCard
-            icon={<CreditCard className="w-4 h-4" />}
-            label="Payments"
-            value={paymentsTitle}
-            subtitle={paymentsSubtitle}
-            tone={paymentsTone}
-            cta={!paymentsSetup ? "Set up" : undefined}
-          />
-          <KpiCard
-            icon={<CheckSquare className="w-4 h-4" />}
-            label="Pending Tasks"
-            value={String(pendingCount)}
-            subtitle={tasksSubtitle}
-            tone={tasksTone}
-          />
+        {/* Visual divider between tenant and tenancy stage */}
+        <div className="border-t border-border" />
+
+        {/* Tenancy Stage section */}
+        <div className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <CheckSquare className="w-3.5 h-3.5 text-primary" />
+              Tenancy stage
+            </h3>
+            <span className="text-[9px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+              {activePhase}
+            </span>
+          </div>
+
+          {(() => {
+            const idx = curPhaseIdx >= 0 ? curPhaseIdx : phaseProgress.length - 1;
+            const current = phaseProgress[idx];
+            const allComplete = curPhaseIdx < 0;
+            return (
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center shrink-0",
+                    allComplete ? "bg-success text-primary-foreground" : "bg-primary text-primary-foreground ring-4 ring-primary/15"
+                  )}>
+                    {allComplete ? <Check className="w-4 h-4" /> : <span className="text-sm font-bold">{idx + 1}</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{allComplete ? "Complete" : current.name}</p>
+                    {!allComplete && current.total > 0 && (
+                      <p className="text-[11px] text-muted-foreground">{current.done}/{current.total} tasks done</p>
+                    )}
+                  </div>
+                </div>
+
+                {!allComplete && pendingTasks.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-border space-y-1.5">
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Remaining in this stage</p>
+                    {pendingTasks.slice(0, 4).map((t: any) => (
+                      <div key={t.id} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <p className="text-xs text-foreground leading-snug line-clamp-2">{t.label}</p>
+                      </div>
+                    ))}
+                    {pendingTasks.length > 4 && (
+                      <p className="text-[10px] text-primary font-semibold pt-1">+{pendingTasks.length - 4} more</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
