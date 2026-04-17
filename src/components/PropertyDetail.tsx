@@ -239,8 +239,6 @@ function OverviewTab({
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-5">
       {/* Hero row: Tenant + Property image (2/3) + Lifecycle (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Hero row: Tenant + Property image (2/3) + Lifecycle (1/3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Tenant + property hero */}
         <div className="lg:col-span-2 bg-card rounded-xl border border-border overflow-hidden shadow-card">
           <div className="grid grid-cols-1 md:grid-cols-5">
