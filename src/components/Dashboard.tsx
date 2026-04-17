@@ -110,115 +110,90 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
           bgColor={criticalAlerts.length > 0 ? "bg-danger-muted" : "bg-success-muted"} />
       </motion.div>
 
-      {/* Property-grouped alerts (replaces flat list) */}
+      {/* Merged: Property compliance + ratings + key alerts */}
       <motion.div
         className="bg-card rounded-xl border border-border p-5"
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.12 }}
       >
-        <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-3.5 h-3.5 text-danger" /> Alerts by property
-          <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">{allAlerts.length} open</span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-          {portfolio.map((p) => {
-            const propAlerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
-            const high = propAlerts.filter((a) => a.severity === "high").length;
-            const medium = propAlerts.length - high;
-            const total = propAlerts.length;
-            const tone = high > 0 ? "danger" : medium > 0 ? "warning" : "success";
-            return (
-              <button
-                key={p.id}
-                onClick={() => onSelectProperty(p.id)}
-                className={cn(
-                  "flex items-center justify-between gap-3 p-3.5 rounded-xl border transition-all text-left group",
-                  tone === "danger" && "border-danger/20 bg-danger-muted/40 hover:bg-danger-muted/70",
-                  tone === "warning" && "border-warning/20 bg-warning-muted/40 hover:bg-warning-muted/70",
-                  tone === "success" && "border-border bg-secondary/30 hover:bg-secondary/60"
-                )}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground truncate">{p.address.split(",")[0]}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{p.address.split(",").slice(1).join(",").trim()}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {total === 0 ? (
-                    <span className="text-[10px] font-bold text-success uppercase tracking-wider">All clear</span>
-                  ) : (
-                    <span
-                      className={cn(
-                        "min-w-[28px] h-7 rounded-full px-2 flex items-center justify-center text-xs font-bold tabular-nums",
-                        tone === "danger" ? "bg-danger text-primary-foreground" : "bg-warning text-warning-foreground"
-                      )}
-                    >
-                      {total}
-                    </span>
-                  )}
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </motion.div>
-
-      {/* Calendar + Income/Expenses chart — 1:2 split */}
-      <motion.div
-        className="grid grid-cols-1 lg:grid-cols-3 gap-5"
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.18 }}
-      >
-        <div className="bg-card rounded-xl border border-border p-5">
-          <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-            <CalendarDays className="w-3.5 h-3.5 text-primary" /> Deadlines
-            <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">{upcomingDeadlinesCount} due</span>
-          </h2>
-          <DeadlineCalendar events={deadlineEvents} onSelectProperty={onSelectProperty} />
-        </div>
-
-        <div className="lg:col-span-2 bg-card rounded-xl border border-border p-5">
-          <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-            <Wallet className="w-3.5 h-3.5 text-success" /> Income vs expenses
-          </h2>
-          <IncomeExpensesChart />
-        </div>
-      </motion.div>
-
-      {/* Compliance + Ratings combined — full width */}
-      <motion.div
-        className="bg-card rounded-xl border border-border p-5"
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.24 }}
-      >
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-            <Shield className="w-3.5 h-3.5 text-primary" /> Property Compliance & Ratings
+            <Shield className="w-3.5 h-3.5 text-primary" /> Property overview
           </h2>
           <button onClick={onNavigateToProperties} className="text-[10px] text-primary font-semibold hover:underline flex items-center gap-0.5">
             View all <ChevronRight className="w-2.5 h-2.5" />
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          {portfolio.map(p => {
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {portfolio.map((p) => {
             const pct = getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo);
             const pr = PROP_RATINGS[p.id] || { rating: 0, count: 0 };
+            const propAlerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
+            // Show only alerts that warrant attention; cap at 2 most important.
+            const keyAlerts = propAlerts
+              .filter((a) => isCritical(a) || a.severity === "high")
+              .sort((a, b) => (isCritical(a) === isCritical(b) ? 0 : isCritical(a) ? -1 : 1))
+              .slice(0, 2);
+            const hasCritical = keyAlerts.some(isCritical);
+
             return (
-              <button key={p.id} onClick={() => onSelectProperty(p.id)}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors group text-left">
-                <ComplianceDonut percentage={pct} size={36} strokeWidth={3} showLabel={false} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-foreground truncate">{p.address.split(",")[0]}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: getRAGColor(pct) }} />
+              <button
+                key={p.id}
+                onClick={() => onSelectProperty(p.id)}
+                className={cn(
+                  "flex flex-col gap-3 p-4 rounded-xl border bg-card text-left transition-all hover:shadow-card hover:-translate-y-0.5 group",
+                  hasCritical ? "border-danger/25" : keyAlerts.length > 0 ? "border-warning/25" : "border-border"
+                )}
+              >
+                {/* Header: address + chevron */}
+                <div className="flex items-start gap-3">
+                  <ComplianceDonut percentage={pct} size={40} strokeWidth={3} showLabel={false} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{p.address.split(",")[0]}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Star className="w-3 h-3 text-warning" fill="currentColor" />
+                      <span className="text-[11px] font-bold text-foreground">{pr.rating}</span>
+                      <span className="text-[10px] text-muted-foreground">({pr.count})</span>
                     </div>
-                    <span className="text-[10px] font-bold" style={{ color: getRAGColor(pct) }}>{pct}%</span>
                   </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Star className="w-3 h-3 text-warning" fill="currentColor" />
-                    <span className="text-[10px] font-semibold text-foreground">{pr.rating}</span>
-                    <span className="text-[10px] text-muted-foreground">({pr.count})</span>
-                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-foreground transition-colors shrink-0 mt-1" />
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-foreground transition-colors shrink-0" />
+
+                {/* Compliance bar */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: getRAGColor(pct) }} />
+                  </div>
+                  <span className="text-[10px] font-bold tabular-nums" style={{ color: getRAGColor(pct) }}>{pct}%</span>
+                </div>
+
+                {/* Key alerts — colour-coded dot + text, max 2 */}
+                <div className="space-y-1 min-h-[44px]">
+                  {keyAlerts.length === 0 ? (
+                    <div className="flex items-center gap-1.5 text-[11px] text-success font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                      All clear
+                    </div>
+                  ) : (
+                    keyAlerts.map((a, i) => {
+                      const critical = isCritical(a);
+                      return (
+                        <div key={i} className="flex items-start gap-1.5">
+                          <span className={cn(
+                            "w-1.5 h-1.5 rounded-full mt-1.5 shrink-0",
+                            critical ? "bg-danger" : "bg-warning"
+                          )} />
+                          <p className={cn(
+                            "text-[11px] leading-snug line-clamp-2",
+                            critical ? "text-danger font-medium" : "text-warning-foreground/90"
+                          )}>
+                            {a.text}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </button>
             );
           })}
