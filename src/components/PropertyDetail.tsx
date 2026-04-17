@@ -182,8 +182,114 @@ function OverviewTab({
 
   const heroPhoto = (PROP_PHOTOS[p.id] && PROP_PHOTOS[p.id][0]) || null;
 
+  // Combine alerts + deadlines into a single, deduped list
+  const combinedItems: { kind: "alert" | "deadline"; text: string; tone: "danger" | "warning" | "muted"; meta?: string; icon: React.ReactNode }[] = [
+    ...alerts.map((a) => ({
+      kind: "alert" as const,
+      text: a.text,
+      tone: (isCritical(a) ? "danger" : "warning") as "danger" | "warning",
+      icon: getAlertIcon(a),
+    })),
+    ...deadlines
+      .filter((d) => !alerts.some((a) => a.text.toLowerCase().includes(d.label.toLowerCase().split(" ")[0])))
+      .map((d) => ({
+        kind: "deadline" as const,
+        text: d.label,
+        tone: (d.status === "expired" ? "danger" : d.days <= 90 ? "warning" : "muted") as "danger" | "warning" | "muted",
+        meta: d.status === "expired" ? "Overdue" : `${d.days}d`,
+        icon: <Clock className="w-3.5 h-3.5" />,
+      })),
+  ];
+  const criticalCount = combinedItems.filter((i) => i.tone === "danger").length;
+
+  const paymentsSetup = recurring.length > 0;
+  const paidCount = recurring.filter((r) => r.status === "paid").length;
+  const overdueCount = recurring.filter((r) => r.status === "overdue").length;
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-5">
+      {/* Top summary row: Alerts & Deadlines + Payments */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Combined Alerts & Deadlines */}
+        <div className="lg:col-span-2 bg-card rounded-xl border border-border p-4 shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <AlertTriangle className={cn("w-3.5 h-3.5", criticalCount > 0 ? "text-danger" : combinedItems.length > 0 ? "text-warning" : "text-success")} />
+              Alerts & Upcoming Deadlines
+            </h3>
+            {combinedItems.length > 0 && (
+              <span className={cn(
+                "text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1.5",
+                criticalCount > 0 ? "bg-danger text-primary-foreground" : "bg-warning text-warning-foreground"
+              )}>
+                {combinedItems.length}
+              </span>
+            )}
+          </div>
+          {combinedItems.length === 0 ? (
+            <div className="flex items-center gap-2 py-3 justify-center">
+              <Check className="w-3.5 h-3.5 text-success" />
+              <p className="text-[11px] text-success font-medium">All clear — nothing due</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {combinedItems.slice(0, 6).map((item, i) => (
+                <div key={i} className={cn(
+                  "flex items-center gap-2 p-2 rounded-lg border",
+                  item.tone === "danger" ? "bg-danger/5 border-danger/15" :
+                  item.tone === "warning" ? "bg-warning/5 border-warning/15" :
+                  "bg-secondary/40 border-border"
+                )}>
+                  <div className={cn("shrink-0",
+                    item.tone === "danger" ? "text-danger" :
+                    item.tone === "warning" ? "text-warning" : "text-muted-foreground"
+                  )}>
+                    {item.icon}
+                  </div>
+                  <p className="text-[11px] font-medium text-foreground leading-snug flex-1 min-w-0 truncate">{item.text}</p>
+                  {item.meta && (
+                    <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0",
+                      item.tone === "danger" ? "text-danger bg-danger-muted" :
+                      item.tone === "warning" ? "text-warning bg-warning-muted" :
+                      "text-muted-foreground bg-secondary"
+                    )}>{item.meta}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Payments overview */}
+        <div className="bg-card rounded-xl border border-border p-4 shadow-card">
+          <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
+            <CreditCard className="w-3.5 h-3.5 text-primary" />
+            Payments
+          </h3>
+          {!paymentsSetup ? (
+            <div className="flex flex-col items-start gap-2 py-1">
+              <p className="text-xs text-muted-foreground leading-snug">
+                No payments set up yet for this property.
+              </p>
+              <button className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
+                Set up payments <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-display text-2xl font-bold text-foreground">£{p.rent.toLocaleString()}</span>
+                <span className="text-[10px] text-muted-foreground">/ month</span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px]">
+                {paidCount > 0 && <span className="text-success font-semibold">{paidCount} paid</span>}
+                {overdueCount > 0 && <><span className="text-muted-foreground">·</span><span className="text-danger font-semibold">{overdueCount} overdue</span></>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Hero row: Tenant + Property image (2/3) + Lifecycle (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Tenant + property hero */}
@@ -303,101 +409,6 @@ function OverviewTab({
       </div>
 
 
-      {/* Alerts + Deadlines + Payments — three column row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Alerts — softened palette */}
-        <div className="bg-card rounded-xl border border-border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <AlertTriangle className={cn("w-3.5 h-3.5", alerts.some(isCritical) ? "text-danger" : alerts.length > 0 ? "text-warning" : "text-success")} />
-              Alerts
-            </h3>
-            {alerts.length > 0 && (
-              <span className={cn(
-                "text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1",
-                alerts.some(isCritical) ? "bg-danger text-primary-foreground" : "bg-warning text-warning-foreground"
-              )}>
-                {alerts.length}
-              </span>
-            )}
-          </div>
-          {alerts.length === 0 ? (
-            <div className="flex items-center gap-2 py-3 justify-center">
-              <Check className="w-3.5 h-3.5 text-success" />
-              <p className="text-[11px] text-success font-medium">All clear</p>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {alerts.map((a, i) => {
-                const critical = isCritical(a);
-                return (
-                  <div key={i} className={cn(
-                    "flex items-start gap-2 p-2 rounded-lg border",
-                    critical ? "bg-danger/5 border-danger/20" : "bg-warning/5 border-warning/20"
-                  )}>
-                    <div className={cn("mt-0.5 shrink-0", critical ? "text-danger" : "text-warning")}>
-                      {getAlertIcon(a)}
-                    </div>
-                    <p className="text-[11px] font-medium text-foreground leading-snug">{a.text}</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Deadlines */}
-        <div className="bg-card rounded-xl border border-border p-4">
-          <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-            <CalendarClock className="w-3.5 h-3.5 text-primary" />
-            Upcoming Deadlines
-          </h3>
-          {deadlines.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-3">No upcoming deadlines</p>
-          ) : (
-            <div className="space-y-1.5">
-              {deadlines.slice(0, 4).map((d, i) => (
-                <div key={i} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg bg-secondary/40">
-                  <Clock className={cn("w-3 h-3 shrink-0",
-                    d.status === "expired" ? "text-danger" : d.days <= 90 ? "text-warning" : "text-muted-foreground"
-                  )} />
-                  <span className="text-xs font-medium text-foreground flex-1 truncate">{d.label}</span>
-                  <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
-                    d.status === "expired" ? "text-danger bg-danger-muted" :
-                    d.days <= 90 ? "text-warning bg-warning-muted" : "text-muted-foreground bg-secondary"
-                  )}>{d.status === "expired" ? "Overdue" : `${d.days}d`}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Payments */}
-        <div className="bg-card rounded-xl border border-border p-4">
-          <h3 className="font-display text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-            <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
-            Payments
-          </h3>
-          {recurring.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-3">No payments set up</p>
-          ) : (
-            <div className="space-y-1.5">
-              {recurring.slice(0, 3).map((rp) => (
-                <div key={rp.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-secondary/40">
-                  <span className="text-xs font-medium text-foreground truncate flex-1 mr-2">{rp.label}</span>
-                  <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
-                    rp.status === "paid" ? "text-success bg-success-muted" :
-                    rp.status === "overdue" ? "text-danger bg-danger-muted" : "text-warning bg-warning-muted"
-                  )}>{rp.status === "paid" ? "Paid" : rp.status === "overdue" ? "Overdue" : "Due soon"}</span>
-                </div>
-              ))}
-              {recurring.length > 3 && (
-                <p className="text-[10px] text-primary font-semibold pl-2 cursor-pointer hover:underline">+{recurring.length - 3} more →</p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
     </motion.div>
   );
 }
