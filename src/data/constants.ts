@@ -97,7 +97,7 @@ export const DOC_VALIDITY_BY_PROP: Record<string, Record<string, DocValidity>> =
   p2: {
     "Gas Safety Certificate": { expiry: "15 Sep 2026", days: 170, status: "valid" },
     "EPC Certificate": { expiry: "01 Mar 2026", days: -27, status: "expired" },
-    "EICR Report": { expiry: "20 Jan 2030", days: 1400, status: "valid" },
+    "EICR Report": { expiry: "12 Jul 2026", days: 110, status: "expiring" },
     "Tenancy Agreement (AST)": { expiry: "14 Mar 2027", days: 352, status: "valid" },
     "Deposit Protection Certificate": { expiry: "15 Mar 2027", days: 353, status: "valid" },
   },
@@ -105,8 +105,8 @@ export const DOC_VALIDITY_BY_PROP: Record<string, Record<string, DocValidity>> =
     "Gas Safety Certificate": { expiry: "01 Dec 2026", days: 248, status: "valid" },
     "EPC Certificate": { expiry: "15 Nov 2033", days: 2790, status: "valid" },
     "EICR Report": { expiry: "10 Jun 2030", days: 1540, status: "valid" },
-    "Tenancy Agreement (AST)": { expiry: "31 Dec 2026", days: 278, status: "valid" },
-    "Deposit Protection Certificate": { expiry: "01 Jan 2027", days: 279, status: "valid" },
+    "Tenancy Agreement (AST)": { expiry: "30 Jun 2026", days: 95, status: "expiring" },
+    "Deposit Protection Certificate": { expiry: "05 Aug 2026", days: 130, status: "expiring" },
   },
 };
 
