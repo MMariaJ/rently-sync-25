@@ -18,7 +18,7 @@ import {
   VAULT_INIT, TASK_DATA, PHASES, PROP_PHOTOS,
   type Property, type VaultDoc,
 } from "@/data/constants";
-import { getPropertyAlerts, getComplianceForProperty, getRAGColor, getRAGLabel } from "@/data/helpers";
+import { getPropertyAlerts, getComplianceForProperty, getRAGLabel } from "@/data/helpers";
 import { useState } from "react";
 
 type PropertyTab = "overview" | "tasks" | "vault" | "comms" | "payments" | "reviews";
