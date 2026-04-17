@@ -192,11 +192,7 @@ function OverviewTab({
             {/* Property image */}
             {heroPhoto && (
               <div className="md:col-span-2 relative h-40 md:h-auto bg-secondary">
-                <img src={heroPhoto.src} alt={heroPhoto.label} className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-                <span className="absolute bottom-2 left-2 text-[10px] font-semibold text-white/95 bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full">
-                  {heroPhoto.label}
-                </span>
+                <img src={heroPhoto.src} alt={p.address} className="absolute inset-0 w-full h-full object-cover" />
               </div>
             )}
 
@@ -244,18 +240,6 @@ function OverviewTab({
                       <span className="text-xs font-bold text-foreground">{ti.rating}</span>
                       <span className="text-[10px] text-muted-foreground">· Tenant since {ti.since}</span>
                     </div>
-                    {contract && (
-                      <div className="mt-3 pt-3 border-t border-border grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Tenancy</p>
-                          <p className="text-xs font-semibold text-foreground mt-0.5">{contract.start} → {contract.end}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Rent</p>
-                          <p className="text-xs font-semibold text-foreground mt-0.5">£{p.rent.toLocaleString()} / month</p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               ) : (
@@ -277,79 +261,47 @@ function OverviewTab({
             </span>
           </div>
 
-          {/* Vertical stepper — clearer than dots */}
-          <ol className="relative space-y-2.5 pl-1">
-            {phaseProgress.map((ph, i) => {
-              const isActive = i === curPhaseIdx;
-              const isComplete = ph.allDone;
-              const isFuture = !isActive && !isComplete && (curPhaseIdx >= 0 ? i > curPhaseIdx : false);
-
-              return (
-                <li key={ph.name} className="flex items-center gap-3">
-                  <div className="relative flex flex-col items-center">
-                    <div className={cn(
-                      "w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all",
-                      isComplete && "bg-success text-primary-foreground",
-                      isActive && "bg-primary text-primary-foreground ring-4 ring-primary/15",
-                      !isActive && !isComplete && "bg-secondary border border-border text-muted-foreground"
-                    )}>
-                      {isComplete ? (
-                        <Check className="w-3 h-3" />
-                      ) : (
-                        <span className="text-[9px] font-bold">{i + 1}</span>
-                      )}
-                    </div>
-                    {i < phaseProgress.length - 1 && (
-                      <div className={cn(
-                        "absolute top-5 left-1/2 -translate-x-1/2 w-0.5 h-3",
-                        isComplete ? "bg-success/40" : "bg-border"
-                      )} />
-                    )}
+          {(() => {
+            const idx = curPhaseIdx >= 0 ? curPhaseIdx : phaseProgress.length - 1;
+            const current = phaseProgress[idx];
+            const allComplete = curPhaseIdx < 0;
+            return (
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center shrink-0",
+                    allComplete ? "bg-success text-primary-foreground" : "bg-primary text-primary-foreground ring-4 ring-primary/15"
+                  )}>
+                    {allComplete ? <Check className="w-4 h-4" /> : <span className="text-sm font-bold">{idx + 1}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "text-xs truncate",
-                      isActive && "font-bold text-foreground",
-                      isComplete && "font-medium text-foreground",
-                      isFuture && "text-muted-foreground"
-                    )}>{ph.name}</p>
-                    {ph.total > 0 && (isActive || isComplete) && (
-                      <p className="text-[10px] text-muted-foreground">{ph.done}/{ph.total} tasks</p>
+                    <p className="text-sm font-bold text-foreground truncate">{allComplete ? "Complete" : current.name}</p>
+                    {!allComplete && current.total > 0 && (
+                      <p className="text-[11px] text-muted-foreground">{current.done}/{current.total} tasks done</p>
                     )}
                   </div>
-                </li>
-              );
-            })}
-          </ol>
+                </div>
 
-          {pendingTasks.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-border">
-              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Next up</p>
-              <p className="text-xs font-medium text-foreground line-clamp-2">{pendingTasks[0].label}</p>
-              {pendingTasks.length > 1 && (
-                <p className="text-[10px] text-primary font-semibold mt-1">+{pendingTasks.length - 1} more in this stage</p>
-              )}
-            </div>
-          )}
+                {!allComplete && pendingTasks.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-border space-y-1.5">
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Remaining in this stage</p>
+                    {pendingTasks.slice(0, 4).map((t: any) => (
+                      <div key={t.id} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        <p className="text-xs text-foreground leading-snug line-clamp-2">{t.label}</p>
+                      </div>
+                    ))}
+                    {pendingTasks.length > 4 && (
+                      <p className="text-[10px] text-primary font-semibold pt-1">+{pendingTasks.length - 4} more</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
-      {/* Compact KPI strip — restored but smaller */}
-      <div className="grid grid-cols-4 gap-3">
-        <QuickStat icon={<Shield className="w-4 h-4" />} label="Compliance" value={`${pct}%`}
-          color={pct >= 80 ? "text-success" : pct >= 50 ? "text-warning" : "text-danger"}
-          bgColor={pct >= 80 ? "bg-success/10" : pct >= 50 ? "bg-warning/10" : "bg-danger/10"} />
-        <QuickStat icon={<AlertTriangle className="w-4 h-4" />} label="Alerts" value={alerts.length.toString()}
-          color={alerts.some(isCritical) ? "text-danger" : alerts.length > 0 ? "text-warning" : "text-success"}
-          bgColor={alerts.some(isCritical) ? "bg-danger/10" : alerts.length > 0 ? "bg-warning/10" : "bg-success/10"} />
-        <QuickStat icon={<CalendarClock className="w-4 h-4" />} label="Next deadline"
-          value={deadlines[0] ? (deadlines[0].status === "expired" ? "Overdue" : `${deadlines[0].days}d`) : "—"}
-          color={deadlines[0]?.status === "expired" ? "text-danger" : (deadlines[0] && deadlines[0].days <= 90) ? "text-warning" : "text-foreground"}
-          bgColor={deadlines[0]?.status === "expired" ? "bg-danger/10" : (deadlines[0] && deadlines[0].days <= 90) ? "bg-warning/10" : "bg-secondary"} />
-        <QuickStat icon={<CheckSquare className="w-4 h-4" />} label="Tasks" value={`${pendingTasks.length} pending`}
-          color={pendingTasks.length > 0 ? "text-primary" : "text-success"}
-          bgColor={pendingTasks.length > 0 ? "bg-primary/10" : "bg-success/10"} />
-      </div>
 
       {/* Alerts + Deadlines + Payments — three column row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
