@@ -206,9 +206,40 @@ function OverviewTab({
   const paidCount = recurring.filter((r) => r.status === "paid").length;
   const overdueCount = recurring.filter((r) => r.status === "overdue").length;
 
+  // KPI summary values
+  const actionItemsCount = combinedItems.length;
+  const actionTone: "danger" | "warning" | "success" =
+    criticalCount > 0 ? "danger" : actionItemsCount > 0 ? "warning" : "success";
+  const actionSubtitle =
+    actionItemsCount === 0
+      ? "All clear"
+      : criticalCount > 0
+        ? `${criticalCount} need${criticalCount === 1 ? "s" : ""} attention`
+        : `${actionItemsCount} upcoming`;
+  const nextItem = combinedItems[0];
+
+  const paymentsTone: "danger" | "warning" | "success" | "muted" =
+    !paymentsSetup ? "muted" : overdueCount > 0 ? "danger" : "success";
+  const paymentsTitle = !paymentsSetup
+    ? "Not set up"
+    : overdueCount > 0
+      ? `${overdueCount} missed`
+      : "All clear";
+  const paymentsSubtitle = !paymentsSetup
+    ? "Set up rent collection"
+    : `£${p.rent.toLocaleString()} / mo · ${paidCount} paid`;
+
+  const pendingCount = pendingTasks.length;
+  const tasksTone: "warning" | "success" = pendingCount > 0 ? "warning" : "success";
+  const tasksSubtitle = pendingCount === 0
+    ? "Stage complete"
+    : `In ${activePhase}`;
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-5">
-      {/* Top summary row: Alerts & Deadlines + Payments */}
+      {/* Hero row: Tenant + Property image (2/3) + Lifecycle (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Combined Alerts & Deadlines */}
         <div className="lg:col-span-2 bg-card rounded-xl border border-border p-4 shadow-card">
