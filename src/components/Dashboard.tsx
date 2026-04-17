@@ -42,13 +42,32 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
     ? allRatings.reduce((s, r) => s + r.rating * r.count, 0) / totalReviews
     : 0;
 
-  const upcomingDeadlines = portfolio.flatMap(p => {
+  // Build calendar events from doc expiries (expired => today; mapped severity)
+  const parseDate = (s: string): Date | null => {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  const today = new Date();
+  const deadlineEvents: DeadlineEvent[] = portfolio.flatMap((p) => {
     const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
     const propLabel = p.address.split(",")[0];
     return Object.entries(validity)
-      .filter(([, v]) => v.days > 0 && v.days <= 180)
-      .map(([doc, v]) => ({ property: propLabel, propId: p.id, doc, ...v }));
-  }).sort((a, b) => a.days - b.days);
+      .map(([doc, v]) => {
+        const date = parseDate(v.expiry) || today;
+        const severity: DeadlineEvent["severity"] =
+          v.status === "expired" ? "high" : v.days <= 90 ? "medium" : "low";
+        return {
+          date: v.status === "expired" ? today : date,
+          label: doc,
+          property: propLabel,
+          propId: p.id,
+          severity,
+        };
+      });
+  });
+  const upcomingDeadlinesCount = deadlineEvents.filter(
+    (e) => e.severity !== "low"
+  ).length;
 
   const greeting = (() => {
     const h = new Date().getHours();
