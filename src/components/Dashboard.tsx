@@ -142,11 +142,12 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
               const key = docName.toLowerCase().split(" ")[0]; // "gas", "epc", "eicr"...
               return alertText.includes(key);
             };
-            const nextDeadline = Object.entries(validity)
+            const upcomingDeadlines = Object.entries(validity)
               .filter(([name, v]) =>
                 (v.status === "expired" || v.days > 0) && !isMentioned(name)
               )
-              .sort(([, a], [, b]) => a.days - b.days)[0];
+              .sort(([, a], [, b]) => a.days - b.days)
+              .slice(0, 2);
 
             return (
               <button
@@ -191,21 +192,26 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
                   )}
                 </div>
 
-                <div className="pt-2 mt-auto border-t border-border/60 flex items-center gap-1.5">
-                  <CalendarClock className="w-3 h-3 text-muted-foreground shrink-0" />
-                  {nextDeadline ? (
-                    <>
-                      <span className="text-[10px] text-muted-foreground truncate flex-1">{nextDeadline[0]}</span>
-                      <span className={cn(
-                        "text-[10px] font-semibold tabular-nums shrink-0",
-                        nextDeadline[1].status === "expired" ? "text-danger" :
-                        nextDeadline[1].days <= 90 ? "text-warning" : "text-muted-foreground"
-                      )}>
-                        {nextDeadline[1].status === "expired" ? "Overdue" : `Due ${nextDeadline[1].expiry}`}
-                      </span>
-                    </>
+                <div className="pt-2 mt-auto border-t border-border/60 space-y-1">
+                  {upcomingDeadlines.length === 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <CalendarClock className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <span className="text-[10px] text-muted-foreground">No upcoming deadlines</span>
+                    </div>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">No upcoming deadlines</span>
+                    upcomingDeadlines.map(([name, v], i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <CalendarClock className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <span className="text-[10px] text-muted-foreground truncate flex-1">{name}</span>
+                        <span className={cn(
+                          "text-[10px] font-semibold tabular-nums shrink-0",
+                          v.status === "expired" ? "text-danger" :
+                          v.days <= 90 ? "text-warning" : "text-muted-foreground"
+                        )}>
+                          {v.status === "expired" ? "Overdue" : `Due ${v.expiry}`}
+                        </span>
+                      </div>
+                    ))
                   )}
                 </div>
               </button>
