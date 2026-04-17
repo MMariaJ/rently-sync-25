@@ -8,7 +8,7 @@ import { ComplianceDonut } from "./ComplianceDonut";
 import { StarRating } from "./StarRating";
 import {
   TENANT_INFO, HMO_TENANTS, VAULT_INIT,
-  LANDLORD_PROFILE, PROP_RATINGS,
+  LANDLORD_PROFILE, PROP_RATINGS, DOC_VALIDITY_BY_PROP,
   type Property, type VaultDoc,
 } from "@/data/constants";
 import { getPropertyAlerts, getComplianceForProperty, getRAGColor } from "@/data/helpers";
