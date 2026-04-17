@@ -214,10 +214,10 @@ function OverviewTab({
   const paidCount = recurring.filter((r) => r.status === "paid").length;
   const overdueCount = recurring.filter((r) => r.status === "overdue").length;
 
-  // KPI summary values
-  const actionItemsCount = combinedItems.length;
-  const actionTone: "danger" | "warning" | "success" =
-    criticalCount > 0 ? "danger" : actionItemsCount > 0 ? "warning" : "success";
+  // KPI summary values — Alerts shows only TRUE alerts (not deadline reminders)
+  const actionItemsCount = alerts.length;
+  const criticalAlerts = alerts.filter((a: any) => isCritical(a)).length;
+  const actionTone: "info" = "info";
   const actionSubtitle =
     actionItemsCount === 0
       ? "All clear"
