@@ -20,7 +20,10 @@ export const getPropertyAlerts = (propId: string, propVault: VaultDoc[]): Alert[
   const docIssues = ALERT_DOC_NAMES.map(({ name, short }) => {
     const uploaded = propVault.some(d => d.name === name && d.status === "uploaded");
     const validity = propDocValidity[name];
-    const status = uploaded ? (validity?.status || "valid") : "missing";
+    // Treat as present if uploaded OR if we have a non-expired validity record
+    // (the demo seed leaves docs "pending" in the vault even when valid).
+    const hasValidRecord = validity && validity.status !== "expired";
+    const status = uploaded || hasValidRecord ? (validity?.status || "valid") : "missing";
     if (status === "valid") return null;
     return { short, status, severity: (status === "expired" || status === "missing" ? "high" : "medium") as "high" | "medium", docName: name, days: validity?.days };
   }).filter(Boolean) as { short: string; status: string; severity: "high" | "medium"; docName: string; days?: number }[];
