@@ -2,9 +2,10 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
   ArrowLeft, Building2, CheckSquare, Lock, MessageSquare,
-  CreditCard, Star, User, AlertTriangle, ChevronRight, Check,
+  CreditCard, Star, User, AlertTriangle, ChevronRight, ChevronLeft, Check,
   FileText, Clock, Shield, Flame, Zap, FileWarning, Scale, CalendarClock,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ComplianceDonut } from "./ComplianceDonut";
 import { StarRating } from "./StarRating";
 import { TasksTab } from "./TasksTab";
