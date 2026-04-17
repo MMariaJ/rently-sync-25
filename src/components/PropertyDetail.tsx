@@ -180,6 +180,14 @@ function OverviewTab({
     .map(([name, v]) => ({ label: name, ...v }))
     .sort((a, b) => a.days - b.days);
 
+  // Parse deadline expiry strings (e.g. "13 Jun 2026") into Dates for the mini-calendar
+  const deadlineDates = deadlines
+    .map((d) => {
+      const dt = new Date(d.expiry);
+      return isNaN(dt.getTime()) ? null : { date: dt, label: d.label, status: d.status, days: d.days };
+    })
+    .filter(Boolean) as { date: Date; label: string; status: string; days: number }[];
+
   const heroPhoto = (PROP_PHOTOS[p.id] && PROP_PHOTOS[p.id][0]) || null;
 
   // Combine alerts + deadlines into a single, deduped list
