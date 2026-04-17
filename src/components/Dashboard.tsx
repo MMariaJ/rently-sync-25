@@ -104,10 +104,10 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
           icon={<ComplianceDonut percentage={avgCompliance} size={24} strokeWidth={3} showLabel={false} />}
           color={avgCompliance >= 80 ? "text-success" : avgCompliance >= 50 ? "text-warning" : "text-danger"}
           bgColor={avgCompliance >= 80 ? "bg-success-muted" : avgCompliance >= 50 ? "bg-warning-muted" : "bg-danger-muted"} />
-        <KPICard label="Action Items" value={highAlerts.length.toString()}
+        <KPICard label="Action Items" value={criticalAlerts.length.toString()}
           icon={<AlertTriangle className="w-4 h-4" />}
-          color={highAlerts.length > 0 ? "text-danger" : "text-success"}
-          bgColor={highAlerts.length > 0 ? "bg-danger-muted" : "bg-success-muted"} />
+          color={criticalAlerts.length > 0 ? "text-danger" : "text-success"}
+          bgColor={criticalAlerts.length > 0 ? "bg-danger-muted" : "bg-success-muted"} />
       </motion.div>
 
       {/* Property-grouped alerts (replaces flat list) */}
