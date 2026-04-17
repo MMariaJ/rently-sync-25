@@ -141,20 +141,27 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
               : "bg-success";
 
             const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
+            // Surface a deadline that ISN'T already mentioned in the alerts above,
+            // so we don't duplicate "EPC expired" / "Gas Safety expiring" lines.
+            const alertText = keyAlerts.map(a => a.text.toLowerCase()).join(" ");
+            const isMentioned = (docName: string) => {
+              const key = docName.toLowerCase().split(" ")[0]; // "gas", "epc", "eicr"...
+              return alertText.includes(key);
+            };
             const nextDeadline = Object.entries(validity)
-              .filter(([, v]) => v.status === "expired" || (v.days > 0 && v.days <= 365))
+              .filter(([name, v]) =>
+                (v.status === "expired" || v.days > 0) && !isMentioned(name)
+              )
               .sort(([, a], [, b]) => a.days - b.days)[0];
 
             return (
               <button
                 key={p.id}
                 onClick={() => onSelectProperty(p.id)}
-                className="relative flex flex-col gap-3 p-4 pl-5 rounded-xl border border-border bg-card text-left transition-all hover:shadow-card hover:-translate-y-0.5 hover:border-border/80 group overflow-hidden"
+                className="relative flex flex-col gap-3 p-4 rounded-xl border border-border bg-card text-left transition-all hover:shadow-card hover:-translate-y-0.5 hover:border-border/80 group overflow-hidden"
               >
-                <span className={cn("absolute left-0 top-0 bottom-0 w-1", accentClass)} aria-hidden />
-
                 <div className="flex items-start gap-3">
-                  <ComplianceDonut percentage={pct} size={40} strokeWidth={3} showLabel={false} />
+                  <ComplianceDonut percentage={pct} size={44} strokeWidth={4} showLabel />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{p.address.split(",")[0]}</p>
                     <div className="flex items-center gap-1 mt-0.5">
@@ -164,13 +171,6 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-foreground transition-colors shrink-0 mt-1" />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: getRAGColor(pct) }} />
-                  </div>
-                  <span className="text-[10px] font-bold tabular-nums" style={{ color: getRAGColor(pct) }}>{pct}%</span>
                 </div>
 
                 <div className="space-y-1 min-h-[40px]">
@@ -203,11 +203,11 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
                     <>
                       <span className="text-[10px] text-muted-foreground truncate flex-1">{nextDeadline[0]}</span>
                       <span className={cn(
-                        "text-[10px] font-bold tabular-nums shrink-0",
+                        "text-[10px] font-semibold tabular-nums shrink-0",
                         nextDeadline[1].status === "expired" ? "text-danger" :
                         nextDeadline[1].days <= 90 ? "text-warning" : "text-muted-foreground"
                       )}>
-                        {nextDeadline[1].status === "expired" ? "Overdue" : `${nextDeadline[1].days}d`}
+                        {nextDeadline[1].status === "expired" ? "Overdue" : `Due ${nextDeadline[1].expiry}`}
                       </span>
                     </>
                   ) : (
