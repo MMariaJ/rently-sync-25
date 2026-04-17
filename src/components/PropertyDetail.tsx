@@ -217,17 +217,14 @@ function OverviewTab({
   // KPI summary values — Alerts shows only TRUE alerts (not deadline reminders)
   const actionItemsCount = alerts.length;
   const criticalAlerts = alerts.filter((a: any) => isCritical(a)).length;
-  const actionTone: "info" = "info";
   const actionSubtitle =
     actionItemsCount === 0
       ? "All clear"
-      : criticalCount > 0
-        ? `${criticalCount} need${criticalCount === 1 ? "s" : ""} attention`
-        : `${actionItemsCount} upcoming`;
-  const nextItem = combinedItems[0];
+      : criticalAlerts > 0
+        ? `${criticalAlerts} need${criticalAlerts === 1 ? "s" : ""} attention`
+        : `${actionItemsCount} to review`;
+  const nextAlert = alerts[0];
 
-  const paymentsTone: "danger" | "warning" | "success" | "muted" =
-    !paymentsSetup ? "muted" : overdueCount > 0 ? "danger" : "success";
   const paymentsTitle = !paymentsSetup
     ? "Not set up"
     : overdueCount > 0
@@ -238,30 +235,26 @@ function OverviewTab({
     : `£${p.rent.toLocaleString()} / mo · ${paidCount} paid`;
 
   const pendingCount = pendingTasks.length;
-  const tasksTone: "warning" | "success" = pendingCount > 0 ? "warning" : "success";
   const tasksSubtitle = pendingCount === 0
     ? "Stage complete"
     : `In ${activePhase}`;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-5">
-      {/* KPI cards row — directly under the Overview submenu */}
+      {/* KPI cards row — uniform light-blue gradient tone */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KpiCard
           icon={<AlertTriangle className="w-4 h-4" />}
-          label="Action Items"
+          label="Alerts"
           value={String(actionItemsCount)}
           subtitle={actionSubtitle}
-          tone={actionTone}
-          detail={nextItem ? `Next: ${nextItem.text}${nextItem.meta ? ` · ${nextItem.meta}` : ""}` : undefined}
-          calendarDates={deadlineDates}
+          detail={nextAlert ? nextAlert.text : undefined}
         />
         <KpiCard
           icon={<CreditCard className="w-4 h-4" />}
           label="Payments"
           value={paymentsTitle}
           subtitle={paymentsSubtitle}
-          tone={paymentsTone}
           cta={!paymentsSetup ? "Set up" : undefined}
         />
         <KpiCard
@@ -269,7 +262,6 @@ function OverviewTab({
           label="Pending Messages"
           value={String(pendingCount)}
           subtitle={tasksSubtitle}
-          tone={tasksTone}
         />
       </div>
 
