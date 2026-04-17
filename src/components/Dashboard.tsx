@@ -1,17 +1,19 @@
 import { motion } from "framer-motion";
 import {
-  Building2, TrendingUp, AlertTriangle, Shield, Calendar,
-  ChevronRight, Clock, Star, Sparkles,
+  Building2, TrendingUp, AlertTriangle, Shield, CalendarDays,
+  ChevronRight, Star, Sparkles, Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ComplianceDonut } from "./ComplianceDonut";
 import { StarRating } from "./StarRating";
+import { DeadlineCalendar, type DeadlineEvent } from "./DeadlineCalendar";
+import { IncomeExpensesChart } from "./IncomeExpensesChart";
 import {
   TENANT_INFO, HMO_TENANTS, VAULT_INIT,
   LANDLORD_PROFILE, DOC_VALIDITY_BY_PROP, PROP_RATINGS,
   type Property, type VaultDoc,
 } from "@/data/constants";
-import { getPropertyAlerts, getComplianceForProperty, getRAGColor, getRAGLabel } from "@/data/helpers";
+import { getPropertyAlerts, getComplianceForProperty, getRAGColor } from "@/data/helpers";
 
 interface DashboardProps {
   portfolio: Property[];
@@ -40,13 +42,32 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
     ? allRatings.reduce((s, r) => s + r.rating * r.count, 0) / totalReviews
     : 0;
 
-  const upcomingDeadlines = portfolio.flatMap(p => {
+  // Build calendar events from doc expiries (expired => today; mapped severity)
+  const parseDate = (s: string): Date | null => {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  const today = new Date();
+  const deadlineEvents: DeadlineEvent[] = portfolio.flatMap((p) => {
     const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
     const propLabel = p.address.split(",")[0];
     return Object.entries(validity)
-      .filter(([, v]) => v.days > 0 && v.days <= 180)
-      .map(([doc, v]) => ({ property: propLabel, propId: p.id, doc, ...v }));
-  }).sort((a, b) => a.days - b.days);
+      .map(([doc, v]) => {
+        const date = parseDate(v.expiry) || today;
+        const severity: DeadlineEvent["severity"] =
+          v.status === "expired" ? "high" : v.days <= 90 ? "medium" : "low";
+        return {
+          date: v.status === "expired" ? today : date,
+          label: doc,
+          property: propLabel,
+          propId: p.id,
+          severity,
+        };
+      });
+  });
+  const upcomingDeadlinesCount = deadlineEvents.filter(
+    (e) => e.severity !== "low"
+  ).length;
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -108,72 +129,83 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
           bgColor={highAlerts.length > 0 ? "bg-danger-muted" : "bg-success-muted"} />
       </motion.div>
 
-      {/* 2:1 layout — left (alerts) : right (compliance+ratings & deadlines) */}
+      {/* Property-grouped alerts (replaces flat list) */}
       <motion.div
-        className="grid grid-cols-1 lg:grid-cols-3 gap-5"
+        className="bg-card rounded-xl border border-border p-5"
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.12 }}
       >
-        {/* Left — Alerts (spans 2 cols) */}
-        <div className="lg:col-span-2 bg-card rounded-xl border border-border p-5">
-          <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-3.5 h-3.5 text-danger" /> Alerts
-            <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">{allAlerts.length}</span>
-          </h2>
-          {allAlerts.length > 0 ? (
-            <div className="space-y-0.5 max-h-56 overflow-y-auto">
-              {allAlerts.map((a, i) => (
-                <button key={i} onClick={() => onSelectProperty(a.propId)}
-                  className="w-full flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-secondary/50 transition-colors text-left group">
-                  <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", a.severity === "high" ? "bg-danger" : "bg-warning")} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{a.text}</p>
-                    <p className="text-[10px] text-muted-foreground">{a.property}</p>
-                  </div>
-                  <span className={cn(
-                    "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0",
-                    a.severity === "high" ? "bg-danger-muted text-danger" : "bg-warning-muted text-warning"
-                  )}>{a.severity}</span>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-foreground transition-colors shrink-0" />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-4">No active alerts</p>
-          )}
+        <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
+          <AlertTriangle className="w-3.5 h-3.5 text-danger" /> Alerts by property
+          <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">{allAlerts.length} open</span>
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          {portfolio.map((p) => {
+            const propAlerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
+            const high = propAlerts.filter((a) => a.severity === "high").length;
+            const medium = propAlerts.length - high;
+            const total = propAlerts.length;
+            const tone = high > 0 ? "danger" : medium > 0 ? "warning" : "success";
+            return (
+              <button
+                key={p.id}
+                onClick={() => onSelectProperty(p.id)}
+                className={cn(
+                  "flex items-center justify-between gap-3 p-3.5 rounded-xl border transition-all text-left group",
+                  tone === "danger" && "border-danger/20 bg-danger-muted/40 hover:bg-danger-muted/70",
+                  tone === "warning" && "border-warning/20 bg-warning-muted/40 hover:bg-warning-muted/70",
+                  tone === "success" && "border-border bg-secondary/30 hover:bg-secondary/60"
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground truncate">{p.address.split(",")[0]}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{p.address.split(",").slice(1).join(",").trim()}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {total === 0 ? (
+                    <span className="text-[10px] font-bold text-success uppercase tracking-wider">All clear</span>
+                  ) : (
+                    <span
+                      className={cn(
+                        "min-w-[28px] h-7 rounded-full px-2 flex items-center justify-center text-xs font-bold tabular-nums",
+                        tone === "danger" ? "bg-danger text-primary-foreground" : "bg-warning text-warning-foreground"
+                      )}
+                    >
+                      {total}
+                    </span>
+                  )}
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
+                </div>
+              </button>
+            );
+          })}
         </div>
+      </motion.div>
 
-        {/* Right — Deadlines */}
+      {/* Calendar + Income/Expenses chart — 1:2 split */}
+      <motion.div
+        className="grid grid-cols-1 lg:grid-cols-3 gap-5"
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.18 }}
+      >
         <div className="bg-card rounded-xl border border-border p-5">
           <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
-            <Calendar className="w-3.5 h-3.5 text-warning" /> Deadlines
+            <CalendarDays className="w-3.5 h-3.5 text-primary" /> Deadlines
+            <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">{upcomingDeadlinesCount} due</span>
           </h2>
-          {upcomingDeadlines.length > 0 ? (
-            <div className="space-y-0.5">
-              {upcomingDeadlines.slice(0, 4).map((d, i) => (
-                <button key={i} onClick={() => onSelectProperty(d.propId)}
-                  className="w-full flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-secondary/50 transition-colors text-left">
-                  <Clock className={cn("w-3.5 h-3.5 shrink-0", d.days <= 90 ? "text-warning" : "text-muted-foreground")} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{d.doc}</p>
-                    <p className="text-[10px] text-muted-foreground">{d.property}</p>
-                  </div>
-                  <span className={cn(
-                    "text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
-                    d.days <= 90 ? "bg-warning-muted text-warning" : "bg-secondary text-muted-foreground"
-                  )}>{d.days}d</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-4">No upcoming deadlines</p>
-          )}
+          <DeadlineCalendar events={deadlineEvents} onSelectProperty={onSelectProperty} />
+        </div>
+
+        <div className="lg:col-span-2 bg-card rounded-xl border border-border p-5">
+          <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
+            <Wallet className="w-3.5 h-3.5 text-success" /> Income vs expenses
+          </h2>
+          <IncomeExpensesChart />
         </div>
       </motion.div>
 
       {/* Compliance + Ratings combined — full width */}
       <motion.div
         className="bg-card rounded-xl border border-border p-5"
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.18 }}
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.24 }}
       >
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
@@ -186,7 +218,6 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {portfolio.map(p => {
             const pct = getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo);
-            const alerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
             const pr = PROP_RATINGS[p.id] || { rating: 0, count: 0 };
             return (
               <button key={p.id} onClick={() => onSelectProperty(p.id)}
@@ -204,9 +235,6 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
                     <Star className="w-3 h-3 text-warning" fill="currentColor" />
                     <span className="text-[10px] font-semibold text-foreground">{pr.rating}</span>
                     <span className="text-[10px] text-muted-foreground">({pr.count})</span>
-                    {alerts.length > 0 && (
-                      <span className="text-[10px] text-danger ml-auto">{alerts.length} alert{alerts.length !== 1 ? "s" : ""}</span>
-                    )}
                   </div>
                 </div>
                 <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-foreground transition-colors shrink-0" />
