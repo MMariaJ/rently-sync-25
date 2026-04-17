@@ -395,7 +395,7 @@ function OverviewTab({
 }
 
 function KpiCard({
-  icon, label, value, subtitle, tone, detail, cta,
+  icon, label, value, subtitle, tone, detail, cta, calendarDates,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -404,32 +404,130 @@ function KpiCard({
   tone: "danger" | "warning" | "success" | "muted";
   detail?: string;
   cta?: string;
+  calendarDates?: { date: Date; label: string; status: string; days: number }[];
 }) {
+  // Soft, light gradient surfaces — subtle tonal hint, no strong fills
   const toneStyles = {
-    danger: { bg: "bg-danger-muted", text: "text-danger", value: "text-danger" },
-    warning: { bg: "bg-warning-muted", text: "text-warning", value: "text-foreground" },
-    success: { bg: "bg-success-muted", text: "text-success", value: "text-success" },
-    muted: { bg: "bg-secondary", text: "text-muted-foreground", value: "text-foreground" },
+    danger: {
+      gradient: "bg-gradient-to-br from-danger-muted/60 via-card to-card",
+      iconBg: "bg-danger-muted text-danger",
+      value: "text-foreground",
+    },
+    warning: {
+      gradient: "bg-gradient-to-br from-warning-muted/60 via-card to-card",
+      iconBg: "bg-warning-muted text-warning",
+      value: "text-foreground",
+    },
+    success: {
+      gradient: "bg-gradient-to-br from-success-muted/60 via-card to-card",
+      iconBg: "bg-success-muted text-success",
+      value: "text-foreground",
+    },
+    muted: {
+      gradient: "bg-gradient-to-br from-secondary/70 via-card to-card",
+      iconBg: "bg-secondary text-muted-foreground",
+      value: "text-foreground",
+    },
   }[tone];
 
   return (
-    <div className="bg-card rounded-xl border border-border p-4 shadow-card">
+    <div className={cn("relative rounded-xl border border-border p-4 shadow-card overflow-hidden", toneStyles.gradient)}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</span>
-        <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", toneStyles.bg, toneStyles.text)}>
+        <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", toneStyles.iconBg)}>
           {icon}
         </div>
       </div>
       <p className={cn("font-display text-2xl font-bold leading-tight", toneStyles.value)}>{value}</p>
       <p className="text-[11px] text-muted-foreground mt-1">{subtitle}</p>
-      {detail && (
-        <p className="text-[11px] text-foreground mt-2 pt-2 border-t border-border truncate">{detail}</p>
+
+      {calendarDates && calendarDates.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-border/60">
+          <MiniDeadlineCalendar dates={calendarDates} />
+        </div>
+      )}
+
+      {detail && !calendarDates && (
+        <p className="text-[11px] text-foreground mt-2 pt-2 border-t border-border/60 truncate">{detail}</p>
       )}
       {cta && (
         <button className="text-[11px] font-semibold text-primary hover:underline mt-2 inline-flex items-center gap-1">
           {cta} <ChevronRight className="w-3 h-3" />
         </button>
       )}
+    </div>
+  );
+}
+
+/* ─── Mini calendar visual with circled deadline dates ─── */
+function MiniDeadlineCalendar({
+  dates,
+}: { dates: { date: Date; label: string; status: string; days: number }[] }) {
+  const anchor = dates[0]?.date ?? new Date();
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const monthLabel = anchor.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startOffset = (firstDay.getDay() + 6) % 7; // Mon=0
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const dayMap = new Map<number, { status: string; label: string }>();
+  for (const d of dates) {
+    if (d.date.getFullYear() === year && d.date.getMonth() === month) {
+      dayMap.set(d.date.getDate(), { status: d.status, label: d.label });
+    }
+  }
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const todayDay = isCurrentMonth ? today.getDate() : -1;
+  const weekdayLabels = ["M", "T", "W", "T", "F", "S", "S"];
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-bold text-foreground">{monthLabel}</span>
+        <span className="text-[9px] text-muted-foreground">
+          {dates.length} deadline{dates.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <div className="grid grid-cols-7 gap-0.5 text-center">
+        {weekdayLabels.map((w, i) => (
+          <div key={i} className="text-[8px] font-semibold text-muted-foreground py-0.5">{w}</div>
+        ))}
+        {cells.map((day, i) => {
+          if (day === null) return <div key={i} className="h-5" />;
+          const marked = dayMap.get(day);
+          const isToday = day === todayDay;
+          return (
+            <div
+              key={i}
+              title={marked?.label}
+              className={cn(
+                "h-5 w-5 mx-auto flex items-center justify-center text-[9px] rounded-full transition-colors",
+                marked
+                  ? cn(
+                      "font-bold ring-2",
+                      marked.status === "expired"
+                        ? "ring-danger text-danger bg-danger-muted/50"
+                        : "ring-warning text-warning bg-warning-muted/50",
+                    )
+                  : isToday
+                    ? "text-primary font-bold"
+                    : "text-muted-foreground",
+              )}
+            >
+              {day}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
