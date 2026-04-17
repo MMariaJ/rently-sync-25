@@ -1,17 +1,19 @@
 import { motion } from "framer-motion";
 import {
-  Building2, TrendingUp, AlertTriangle, Shield, Calendar,
-  ChevronRight, Clock, Star, Sparkles,
+  Building2, TrendingUp, AlertTriangle, Shield, CalendarDays,
+  ChevronRight, Star, Sparkles, Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ComplianceDonut } from "./ComplianceDonut";
 import { StarRating } from "./StarRating";
+import { DeadlineCalendar, type DeadlineEvent } from "./DeadlineCalendar";
+import { IncomeExpensesChart } from "./IncomeExpensesChart";
 import {
   TENANT_INFO, HMO_TENANTS, VAULT_INIT,
   LANDLORD_PROFILE, DOC_VALIDITY_BY_PROP, PROP_RATINGS,
   type Property, type VaultDoc,
 } from "@/data/constants";
-import { getPropertyAlerts, getComplianceForProperty, getRAGColor, getRAGLabel } from "@/data/helpers";
+import { getPropertyAlerts, getComplianceForProperty, getRAGColor } from "@/data/helpers";
 
 interface DashboardProps {
   portfolio: Property[];
