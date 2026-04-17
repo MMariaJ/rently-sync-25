@@ -35,7 +35,7 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
     portfolio.reduce((s, p) => s + getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo), 0) / Math.max(portfolio.length, 1)
   );
   const allAlerts = portfolio.flatMap(p => getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT));
-  const highAlerts = allAlerts.filter(a => a.severity === "high");
+  const criticalAlerts = allAlerts.filter(isCritical);
   const totalTenants = portfolio.reduce((s, p) => {
     if (p.isHmo && HMO_TENANTS[p.id]) return s + HMO_TENANTS[p.id].length;
     if (TENANT_INFO[p.id]) return s + 1;
