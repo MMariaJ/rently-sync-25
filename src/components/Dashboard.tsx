@@ -11,7 +11,7 @@ import {
   LANDLORD_PROFILE, PROP_RATINGS, DOC_VALIDITY_BY_PROP,
   type Property, type VaultDoc,
 } from "@/data/constants";
-import { getPropertyAlerts, getComplianceForProperty, getRAGColor } from "@/data/helpers";
+import { getPropertyAlerts, getComplianceForProperty } from "@/data/helpers";
 
 // An alert is "critical" only when truly overdue / expired / missing.
 // "Expiring soon" lives on the property page, not the dashboard summary.
@@ -133,12 +133,6 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
               .filter((a) => isCritical(a) || a.severity === "high")
               .sort((a, b) => (isCritical(a) === isCritical(b) ? 0 : isCritical(a) ? -1 : 1))
               .slice(0, 2);
-            const hasCritical = keyAlerts.some(isCritical);
-            const accentClass = hasCritical
-              ? "bg-danger"
-              : keyAlerts.length > 0
-              ? "bg-warning"
-              : "bg-success";
 
             const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
             // Surface a deadline that ISN'T already mentioned in the alerts above,
