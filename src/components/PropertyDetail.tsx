@@ -355,8 +355,33 @@ function OverviewTab({
         </div>
       </div>
 
+      {/* Three KPI cards: Action Items · Payments · Pending Tasks */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <KpiCard
+          icon={<AlertTriangle className="w-4 h-4" />}
+          label="Action Items"
+          value={String(actionItemsCount)}
+          subtitle={actionSubtitle}
+          tone={actionTone}
+          detail={nextItem ? `Next: ${nextItem.text}${nextItem.meta ? ` · ${nextItem.meta}` : ""}` : undefined}
+        />
+        <KpiCard
+          icon={<CreditCard className="w-4 h-4" />}
+          label="Payments"
+          value={paymentsTitle}
+          subtitle={paymentsSubtitle}
+          tone={paymentsTone}
+          cta={!paymentsSetup ? "Set up" : undefined}
+        />
+        <KpiCard
+          icon={<CheckSquare className="w-4 h-4" />}
+          label="Pending Tasks"
+          value={String(pendingCount)}
+          subtitle={tasksSubtitle}
+          tone={tasksTone}
+        />
+      </div>
 
-    </motion.div>
   );
 }
 
