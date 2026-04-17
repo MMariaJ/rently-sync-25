@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import {
-  Building2, TrendingUp, AlertTriangle, Shield,
+  Building2, TrendingUp, AlertTriangle, Shield, CalendarClock,
   ChevronRight, Star, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
