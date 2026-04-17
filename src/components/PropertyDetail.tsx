@@ -15,7 +15,7 @@ import { ReviewsTab } from "./ReviewsTab";
 import {
   TENANT_INFO, HMO_TENANTS, PROP_RATINGS, PROP_CONTRACT,
   PAYMENTS_BY_PROP, RECURRING_PAYMENTS, DOC_VALIDITY_BY_PROP,
-  VAULT_INIT, TASK_DATA, PHASES,
+  VAULT_INIT, TASK_DATA, PHASES, PROP_PHOTOS,
   type Property, type VaultDoc,
 } from "@/data/constants";
 import { getPropertyAlerts, getComplianceForProperty, getRAGColor, getRAGLabel } from "@/data/helpers";
