@@ -139,3 +139,13 @@
 @layer utilities {
   .text-balance { text-wrap: balance; }
 }
+
+@layer components {
+  /* Audience router cards — brighten the three neutral borders on hover.
+     Top border stays the brand colour (set inline). */
+  .audience-card:hover {
+    border-right-color: hsl(var(--foreground) / 0.25) !important;
+    border-bottom-color: hsl(var(--foreground) / 0.25) !important;
+    border-left-color: hsl(var(--foreground) / 0.25) !important;
+  }
+}
