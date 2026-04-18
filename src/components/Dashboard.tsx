@@ -3,6 +3,7 @@ import { ComplianceDonut } from "./ComplianceDonut";
 import { DeadlineCalendar, type DeadlineDate } from "./DeadlineCalendar";
 import { HeroHealthyCard } from "./HeroHealthyCard";
 import { HealthRow } from "./HealthRow";
+import { YourPropertiesSection } from "./YourPropertiesSection";
 import {
   TENANT_INFO, HMO_TENANTS, VAULT_INIT,
   LANDLORD_PROFILE, DOC_VALIDITY_BY_PROP,
@@ -102,72 +103,28 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
         <Stat label="Alerts" value={criticalAlerts.length.toString()} tone={criticalAlerts.length > 0 ? "danger" : "default"} />
       </div>
 
-      {/* Split: Property overview + Deadlines */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-card hairline rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="label-eyebrow">Property overview</h2>
-            <button onClick={onNavigateToProperties} className="text-[12px] text-primary hover:underline flex items-center gap-0.5">
-              View all <ChevronRight className="w-3 h-3" />
-            </button>
+      {/* Split: Your properties + Deadlines */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
+        <YourPropertiesSection />
+
+        <section>
+          <h2
+            className="font-medium text-muted-foreground mb-2.5"
+            style={{
+              fontSize: "12px",
+              letterSpacing: "0.5px",
+              textTransform: "uppercase",
+            }}
+          >
+            Portfolio deadlines
+          </h2>
+          <div className="bg-card hairline rounded-xl p-5">
+            {allDeadlines.length > 0 ? (
+              <DeadlineCalendar dates={allDeadlines} upcomingLimit={5} />
+            ) : (
+              <p className="text-[13px] text-muted-foreground">No upcoming deadlines.</p>
+            )}
           </div>
-
-          <div className="-mx-5">
-            {portfolio.map((p, idx) => {
-              const pct = getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo);
-              const propAlerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
-              const critCount = propAlerts.filter(isCritical).length;
-              const warnCount = propAlerts.length - critCount;
-
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => onSelectProperty(p.id)}
-                  className={`w-full flex items-center gap-4 px-5 py-3 text-left transition-colors hover:bg-secondary/40 ${idx > 0 ? "hairline-t" : ""}`}
-                >
-                  <ComplianceDonut percentage={pct} size={36} strokeWidth={3} showLabel={false} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] text-foreground truncate">{p.address.split(",")[0]}</p>
-                    <p className="text-[12px] text-muted-foreground mt-0.5 tabular-nums">
-                      {pct}% compliant
-                      {propAlerts.length === 0 && " · all clear"}
-                    </p>
-                  </div>
-
-                  {propAlerts.length > 0 && (
-                    <div className="flex items-center gap-2 shrink-0 text-[12px] tabular-nums">
-                      {critCount > 0 && (
-                        <span className="text-danger">
-                          {critCount} {critCount === 1 ? "alert" : "alerts"}
-                        </span>
-                      )}
-                      {warnCount > 0 && (
-                        <span className="text-muted-foreground">
-                          {warnCount} to review
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="bg-card hairline rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="label-eyebrow">Portfolio deadlines</h2>
-            <span className="text-[12px] text-muted-foreground tabular-nums">
-              {allDeadlines.length} upcoming
-            </span>
-          </div>
-          {allDeadlines.length > 0 ? (
-            <DeadlineCalendar dates={allDeadlines} upcomingLimit={5} />
-          ) : (
-            <p className="text-[13px] text-muted-foreground">No upcoming deadlines.</p>
-          )}
         </section>
       </div>
     </div>
