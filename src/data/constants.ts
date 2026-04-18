@@ -5,6 +5,7 @@ export const PHASES = ["Pre-Move-In", "Move-In", "During Tenancy", "Move-Out", "
 export interface Property {
   id: string;
   address: string;
+  postcode: string;
   tenant: string;
   rent: number;
   status: "active" | "vacant";
@@ -12,9 +13,12 @@ export interface Property {
   nextDeadline: string;
   depositRef: string | null;
   depositScheme: string | null;
+  depositAmount?: number;
   verified: boolean;
   contractUploaded: boolean;
   isHmo?: boolean;
+  // For HMO: who is responsible for utility bills
+  utilityMode?: "landlord-pays" | "tenants-pay";
 }
 
 export interface TenantInfo {
@@ -70,9 +74,9 @@ export interface TaskItem {
 }
 
 export const PORTFOLIO: Property[] = [
-  { id: "p1", address: "14 Elmwood Road, London SE4 2BN", tenant: "Sarah Mitchell", rent: 1450, status: "active", compliance: 0, nextDeadline: "Gas cert renewal — 14 Jun 2026", depositRef: "MD2024-88421", depositScheme: "MyDeposits", verified: true, contractUploaded: true },
-  { id: "p2", address: "7 Crane Wharf, Greenwich SE10 0LN", tenant: "James Okafor", rent: 1800, status: "active", compliance: 0, nextDeadline: "EPC renewal overdue", depositRef: "DPS2025-11043", depositScheme: "DPS", verified: true, contractUploaded: true },
-  { id: "p3", address: "3 Saffron Court, Hackney E8 1QP", tenant: "3 tenants", rent: 1870, status: "active", compliance: 0, nextDeadline: "No actions due", depositRef: null, depositScheme: null, verified: true, contractUploaded: true, isHmo: true },
+  { id: "p1", address: "14 Elmwood Road, London SE4 2BN", postcode: "London SE4 2BN", tenant: "Sarah Mitchell", rent: 1450, status: "active", compliance: 0, nextDeadline: "Gas cert renewal — 14 Jun 2026", depositRef: "MD2024-88421", depositScheme: "MyDeposits", depositAmount: 2175, verified: true, contractUploaded: true },
+  { id: "p2", address: "7 Crane Wharf, Greenwich SE10 0LN", postcode: "Greenwich SE10 0LN", tenant: "James Okafor", rent: 1800, status: "active", compliance: 0, nextDeadline: "EPC renewal overdue", depositRef: "DPS2025-11043", depositScheme: "DPS", depositAmount: 2700, verified: true, contractUploaded: true },
+  { id: "p3", address: "3 Saffron Court, Hackney E8 1QP", postcode: "Hackney E8 1QP", tenant: "3 tenants", rent: 1870, status: "active", compliance: 0, nextDeadline: "No actions due", depositRef: null, depositScheme: null, verified: true, contractUploaded: true, isHmo: true, utilityMode: "landlord-pays" },
 ];
 
 export const TENANT_INFO: Record<string, TenantInfo> = {
@@ -111,15 +115,23 @@ export const DOC_VALIDITY_BY_PROP: Record<string, Record<string, DocValidity>> =
 };
 
 export const HMO_TENANTS: Record<string, Array<{
-  id: string; name: string; rent: number; deposit: number; depositScheme: string;
+  id: string; name: string; room: string; rent: number; deposit: number; depositScheme: string;
   depositRef: string; leaseStart: string; leaseEnd: string; avatarUrl: string;
   verified: boolean; since: string; email: string; tasksDone: number; tasksTotal: number;
   rating: number; reviewCount: number;
+  // Payments — current month
+  paymentStatus: "paid" | "upcoming" | "late";
+  paymentRef: string;     // bank reference for the most recent rent payment
+  paidDate?: string;      // when the current month's rent was received
+  dueDate: string;        // when this month's rent is/was due
+  daysLate?: number;      // populated when status === "late"
+  // 6-month reliability sparkline (most recent month last)
+  reliability: { onTime: number; total: number };
 }>> = {
   p3: [
-    { id: "ht1", name: "Mia Chen", rent: 650, deposit: 650, depositScheme: "MyDeposits", depositRef: "MD2026-33101", leaseStart: "01 Jan 2026", leaseEnd: "31 Dec 2026", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face", verified: true, since: "January 2026", email: "m.chen@email.com", tasksDone: 8, tasksTotal: 12, rating: 4.8, reviewCount: 3 },
-    { id: "ht2", name: "Kwame Asante", rent: 620, deposit: 620, depositScheme: "DPS", depositRef: "DPS2026-44205", leaseStart: "15 Feb 2026", leaseEnd: "14 Feb 2027", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face", verified: true, since: "February 2026", email: "k.asante@email.com", tasksDone: 5, tasksTotal: 12, rating: 4.5, reviewCount: 2 },
-    { id: "ht3", name: "Sofia Rossi", rent: 600, deposit: 600, depositScheme: "MyDeposits", depositRef: "MD2026-33209", leaseStart: "01 Mar 2026", leaseEnd: "28 Feb 2027", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face", verified: true, since: "March 2026", email: "s.rossi@email.com", tasksDone: 3, tasksTotal: 12, rating: 4.2, reviewCount: 1 },
+    { id: "ht1", name: "Mia Chen", room: "1", rent: 650, deposit: 650, depositScheme: "MyDeposits", depositRef: "MD2026-33101", leaseStart: "01 Jan 2026", leaseEnd: "31 Dec 2026", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face", verified: true, since: "January 2026", email: "m.chen@email.com", tasksDone: 8, tasksTotal: 12, rating: 4.8, reviewCount: 3, paymentStatus: "paid", paymentRef: "OB-MC-04261", paidDate: "1 Apr 2026", dueDate: "1 Apr 2026", reliability: { onTime: 6, total: 6 } },
+    { id: "ht2", name: "Kwame Asante", room: "2", rent: 620, deposit: 620, depositScheme: "DPS", depositRef: "DPS2026-44205", leaseStart: "15 Feb 2026", leaseEnd: "14 Feb 2027", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face", verified: true, since: "February 2026", email: "k.asante@email.com", tasksDone: 5, tasksTotal: 12, rating: 4.5, reviewCount: 2, paymentStatus: "paid", paymentRef: "OB-KA-04158", paidDate: "15 Apr 2026", dueDate: "15 Apr 2026", reliability: { onTime: 2, total: 2 } },
+    { id: "ht3", name: "Sofia Rossi", room: "3", rent: 600, deposit: 600, depositScheme: "MyDeposits", depositRef: "MD2026-33209", leaseStart: "01 Mar 2026", leaseEnd: "28 Feb 2027", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face", verified: true, since: "March 2026", email: "s.rossi@email.com", tasksDone: 3, tasksTotal: 12, rating: 4.2, reviewCount: 1, paymentStatus: "upcoming", paymentRef: "OB-SR-04309", dueDate: "20 Apr 2026", reliability: { onTime: 1, total: 1 } },
   ],
 };
 
@@ -301,4 +313,82 @@ export const PROP_RATINGS: Record<string, { rating: number; count: number }> = {
   p1: { rating: 4.9, count: 3 },
   p2: { rating: 4.7, count: 5 },
   p3: { rating: 4.6, count: 6 },
+};
+
+// Six-month rent reliability sparkline. Most recent month last.
+// Each entry: month label, expected payments, paid-on-time count, and
+// (for the in-progress month) a 0-1 collected ratio.
+export const RELIABILITY_HISTORY: Record<string, Array<{
+  month: string;
+  expected: number;
+  paidOnTime: number;
+  collectedRatio?: number; // populated only for the current in-progress month
+  inProgress?: boolean;
+}>> = {
+  p1: [
+    { month: "Nov", expected: 1, paidOnTime: 1 },
+    { month: "Dec", expected: 1, paidOnTime: 1 },
+    { month: "Jan", expected: 1, paidOnTime: 1 },
+    { month: "Feb", expected: 1, paidOnTime: 1 },
+    { month: "Mar", expected: 1, paidOnTime: 1 },
+    { month: "Apr", expected: 1, paidOnTime: 1, inProgress: true, collectedRatio: 1 },
+  ],
+  p2: [
+    { month: "Nov", expected: 1, paidOnTime: 1 },
+    { month: "Dec", expected: 1, paidOnTime: 1 },
+    { month: "Jan", expected: 1, paidOnTime: 1 },
+    { month: "Feb", expected: 1, paidOnTime: 0 },
+    { month: "Mar", expected: 1, paidOnTime: 1 },
+    { month: "Apr", expected: 1, paidOnTime: 1, inProgress: true, collectedRatio: 1 },
+  ],
+  p3: [
+    { month: "Nov", expected: 2, paidOnTime: 2 },
+    { month: "Dec", expected: 2, paidOnTime: 2 },
+    { month: "Jan", expected: 3, paidOnTime: 3 },
+    { month: "Feb", expected: 3, paidOnTime: 3 },
+    { month: "Mar", expected: 3, paidOnTime: 3 },
+    { month: "Apr", expected: 3, paidOnTime: 2, inProgress: true, collectedRatio: 2 / 3 },
+  ],
+};
+
+// Landlord-paid utility bills (HMO p3). Split equally across occupied tenants.
+export const HMO_UTILITIES: Record<string, Array<{
+  id: string;
+  type: string;       // e.g. "Electricity", "Gas", "Water", "Broadband"
+  provider: string;
+  dueDate: string;
+  amount: number;
+  status: "paid" | "upcoming" | "overdue";
+}>> = {
+  p3: [
+    { id: "u1", type: "Electricity", provider: "Octopus Energy", dueDate: "12 Apr 2026", amount: 142, status: "paid" },
+    { id: "u2", type: "Gas",         provider: "Octopus Energy", dueDate: "12 Apr 2026", amount: 78,  status: "paid" },
+    { id: "u3", type: "Water",       provider: "Thames Water",   dueDate: "22 Apr 2026", amount: 54,  status: "upcoming" },
+    { id: "u4", type: "Broadband",   provider: "BT",             dueDate: "5 Apr 2026",  amount: 38,  status: "overdue" },
+  ],
+};
+
+// Past months for the Payment history list (most recent first).
+// Each entry stores the totals + a derived status sentence input (lateCount).
+export const PAYMENT_HISTORY_MONTHS: Record<string, Array<{
+  monthLabel: string;     // "March 2026"
+  rentTotal: number;
+  utilitiesTotal: number;
+  lateCount: number;      // 0 when fully on time
+}>> = {
+  p1: [
+    { monthLabel: "March 2026",    rentTotal: 1450, utilitiesTotal: 0, lateCount: 0 },
+    { monthLabel: "February 2026", rentTotal: 1450, utilitiesTotal: 0, lateCount: 0 },
+    { monthLabel: "January 2026",  rentTotal: 1450, utilitiesTotal: 0, lateCount: 0 },
+  ],
+  p2: [
+    { monthLabel: "March 2026",    rentTotal: 1800, utilitiesTotal: 0, lateCount: 0 },
+    { monthLabel: "February 2026", rentTotal: 1800, utilitiesTotal: 0, lateCount: 1 },
+    { monthLabel: "January 2026",  rentTotal: 1800, utilitiesTotal: 0, lateCount: 0 },
+  ],
+  p3: [
+    { monthLabel: "March 2026",    rentTotal: 1870, utilitiesTotal: 312, lateCount: 0 },
+    { monthLabel: "February 2026", rentTotal: 1250, utilitiesTotal: 298, lateCount: 0 },
+    { monthLabel: "January 2026",  rentTotal: 650,  utilitiesTotal: 286, lateCount: 0 },
+  ],
 };

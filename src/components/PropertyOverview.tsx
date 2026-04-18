@@ -220,7 +220,23 @@ export function PropertyOverview({
 
       {/* Header row */}
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
-        <h1 className="text-[20px] font-medium text-foreground tracking-tight">{name}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-[20px] font-medium text-foreground tracking-tight">{name}</h1>
+          {data.isHmo && (
+            <span
+              className="text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: "#F1EFFB",
+                color: "#534AB7",
+                border: "0.5px solid #534AB733",
+                fontWeight: 500,
+                letterSpacing: "0.5px",
+              }}
+            >
+              HMO
+            </span>
+          )}
+        </div>
         <div className="flex items-center text-[13px] text-muted-foreground" style={{ gap: "16px" }}>
           <span>{data.postcode}</span>
           <span className="tabular-nums">{data.rating.toFixed(1)} ★ · {data.reviewCount} reviews</span>
