@@ -25,9 +25,10 @@ export interface PropertyOverviewProps {
   onFileCommsAttachment: AppActions["fileCommsAttachment"];
   onAddReview: AppActions["addReview"];
   onBack: () => void;
+  initialTab?: TabKey;
 }
 
-type TabKey = "Overview" | "Tasks" | "Vault" | "Comms" | "Payments" | "Reviews";
+export type TabKey = "Overview" | "Tasks" | "Vault" | "Comms" | "Payments" | "Reviews";
 
 interface HmoTenant {
   initials: string;
@@ -188,9 +189,9 @@ const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Revi
 export function PropertyOverview({
   property, completed, allVaults, taskUploads, extractedFacts, events, reviews,
   onUploadDoc, onUploadDocDirect, onMarkTaskDone, onUnmarkTaskDone, onSetReminder,
-  onFileCommsAttachment, onAddReview, onBack,
+  onFileCommsAttachment, onAddReview, onBack, initialTab,
 }: PropertyOverviewProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>("Overview");
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? "Overview");
   const data = DATA_BY_ID[property.id] ?? DATA_BY_ID.p2;
   const name = property.address.split(",")[0];
 
