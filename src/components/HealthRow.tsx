@@ -85,7 +85,7 @@ export function HealthRow({
       {/* RIGHT — Inca */}
       <div className="bg-card hairline rounded-xl px-5 py-4">
         <div className="flex items-center justify-between">
-          <span className="text-[13px] text-muted-foreground">Inca · {month}</span>
+          <span className="text-[13px] text-muted-foreground">Income collected · {month}</span>
           <span
             className="text-[11px] rounded-lg px-2 py-0.5"
             style={
