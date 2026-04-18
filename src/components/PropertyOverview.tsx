@@ -182,10 +182,20 @@ const DATA_BY_ID: Record<string, OverviewData> = {
 
 const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Reviews"];
 
-export function PropertyOverview({ property, completed, allVaults, onBack }: PropertyOverviewProps) {
+export function PropertyOverview({
+  property, completed, allVaults, taskUploads, extractedFacts, events,
+  onUploadDoc, onUploadDocDirect, onMarkTaskDone, onUnmarkTaskDone, onSetReminder,
+  onBack,
+}: PropertyOverviewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("Overview");
   const data = DATA_BY_ID[property.id] ?? DATA_BY_ID.p2;
   const name = property.address.split(",")[0];
+
+  // Live derived state from the store
+  const currentPhase: LifecyclePhase = getLifecyclePhase(property, completed, allVaults);
+  const phaseProgress = getPhaseProgress(property, completed, allVaults);
+  const liveEvents = events.filter(e => e.propId === property.id);
+  void currentPhase; void phaseProgress; void extractedFacts;
 
   // Soft red palette for hero
   const RED_BG = "#FBECEC";
