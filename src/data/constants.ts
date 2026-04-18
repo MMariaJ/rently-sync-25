@@ -5,6 +5,7 @@ export const PHASES = ["Pre-Move-In", "Move-In", "During Tenancy", "Move-Out", "
 export interface Property {
   id: string;
   address: string;
+  postcode: string;
   tenant: string;
   rent: number;
   status: "active" | "vacant";
@@ -12,9 +13,12 @@ export interface Property {
   nextDeadline: string;
   depositRef: string | null;
   depositScheme: string | null;
+  depositAmount?: number;
   verified: boolean;
   contractUploaded: boolean;
   isHmo?: boolean;
+  // For HMO: who is responsible for utility bills
+  utilityMode?: "landlord-pays" | "tenants-pay";
 }
 
 export interface TenantInfo {
