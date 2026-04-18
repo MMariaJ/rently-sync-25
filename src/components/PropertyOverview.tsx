@@ -2,8 +2,7 @@ import { useState } from "react";
 import type { Property, VaultDoc } from "@/data/constants";
 import { TasksTab } from "./TasksTab";
 import { LifecycleTasksTab } from "./LifecycleTasksTab";
-import { VaultTab } from "./VaultTab";
-import { ElmwoodVaultTab } from "./ElmwoodVaultTab";
+import { LifecycleVaultTab } from "./LifecycleVaultTab";
 import { CommsTab } from "./CommsTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { ReviewsTab } from "./ReviewsTab";
@@ -239,9 +238,7 @@ export function PropertyOverview({ property, completed, allVaults, onBack }: Pro
           allVaults={allVaults}
         />
       ) : activeTab === "Vault" ? (
-        property.id === "p1"
-          ? <ElmwoodVaultTab />
-          : <VaultTab property={property} allVaults={allVaults} />
+        <LifecycleVaultTab property={property} allVaults={allVaults} />
       ) : activeTab === "Comms" ? (
         <CommsTab property={property} />
       ) : activeTab === "Payments" ? (
