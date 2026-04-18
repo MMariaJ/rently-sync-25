@@ -256,9 +256,19 @@ export function PropertyOverview({
           property={property}
           completed={completed}
           allVaults={allVaults}
+          taskUploads={taskUploads}
+          onUploadDoc={onUploadDoc}
+          onMarkTaskDone={onMarkTaskDone}
+          onUnmarkTaskDone={onUnmarkTaskDone}
+          onSetReminder={onSetReminder}
         />
       ) : activeTab === "Vault" ? (
-        <LifecycleVaultTab property={property} allVaults={allVaults} />
+        <LifecycleVaultTab
+          property={property}
+          allVaults={allVaults}
+          extractedFacts={extractedFacts}
+          onUploadDocDirect={onUploadDocDirect}
+        />
       ) : activeTab === "Comms" ? (
         <CommsTab property={property} />
       ) : activeTab === "Payments" ? (
