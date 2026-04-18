@@ -65,14 +65,12 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
 
   return (
     <div className="space-y-8 pb-12">
-      {isHealthy && (
-        <HeroHealthyCard
-          itemsOnTrack={itemsOnTrack}
-          nextDeadlineDays={nextDeadlineDays}
-          rating={4.7}
-          reviewCount={14}
-        />
-      )}
+      <HeroHealthyCard
+        itemsOnTrack={itemsOnTrack}
+        nextDeadlineDays={nextDeadlineDays}
+        rating={4.7}
+        reviewCount={14}
+      />
 
       {/* Greeting — no card, just text */}
       <div>
