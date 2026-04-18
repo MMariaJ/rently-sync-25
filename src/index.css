@@ -1,124 +1,141 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Grotesk:wght@500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 240 7% 97%;
-    --foreground: 240 10% 12%;
+    /* Neutrals */
+    --background: 0 0% 100%;
+    --foreground: 240 8% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 12%;
+    --card-foreground: 240 8% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 12%;
+    --popover-foreground: 240 8% 12%;
 
-    --primary: 252 56% 57%;
+    /* Primary — purple #534AB7 */
+    --primary: 248 43% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 93%;
-    --secondary-foreground: 240 10% 12%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 8% 12%;
 
-    --muted: 240 5% 93%;
-    --muted-foreground: 240 5% 46%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
 
-    --accent: 252 56% 57%;
+    --accent: 248 43% 50%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 4 90% 58%;
+    /* Semantic — used sparingly */
+    --danger: 0 59% 30%;             /* #791F1F */
+    --danger-foreground: 0 0% 100%;
+    --danger-muted: 0 60% 96%;
+
+    --warning: 35 85% 38%;
+    --warning-foreground: 0 0% 100%;
+    --warning-muted: 36 80% 95%;
+
+    --success: 152 45% 32%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 150 35% 95%;
+
+    --destructive: 0 59% 30%;
     --destructive-foreground: 0 0% 100%;
 
+    /* Hairline border — low contrast */
     --border: 240 6% 90%;
     --input: 240 6% 90%;
-    --ring: 252 56% 57%;
+    --ring: 248 43% 50%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem; /* 12px — cards */
 
-    /* HomeBound semantic tokens */
-    --landlord: 252 56% 57%;
-    --landlord-foreground: 0 0% 100%;
-    --landlord-light: 252 60% 96%;
-
-    --tenant: 173 58% 39%;
-    --tenant-foreground: 0 0% 100%;
-    --tenant-light: 173 55% 94%;
-
-    --success: 160 84% 39%;
-    --success-foreground: 0 0% 100%;
-    --success-muted: 160 40% 94%;
-
-    --warning: 45 93% 47%;
-    --warning-foreground: 0 0% 100%;
-    --warning-muted: 45 80% 94%;
-
-    --danger: 4 90% 58%;
-    --danger-muted: 4 80% 96%;
-
-    --info: 217 91% 60%;
-    --info-muted: 217 80% 96%;
-
-    --sidebar-background: 252 40% 22%;
-    --sidebar-foreground: 252 20% 85%;
-    --sidebar-primary: 252 56% 57%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 4% 46%;
+    --sidebar-primary: 248 43% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 252 35% 28%;
-    --sidebar-accent-foreground: 252 20% 95%;
-    --sidebar-border: 252 30% 30%;
-    --sidebar-ring: 252 56% 57%;
+    --sidebar-accent: 240 5% 96%;
+    --sidebar-accent-foreground: 240 8% 12%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-ring: 248 43% 50%;
   }
 
   .dark {
-    --background: 240 10% 6%;
-    --foreground: 240 7% 95%;
-    --card: 240 10% 10%;
-    --card-foreground: 240 7% 95%;
-    --popover: 240 10% 10%;
-    --popover-foreground: 240 7% 95%;
-    --primary: 252 56% 62%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 8% 16%;
-    --secondary-foreground: 240 7% 95%;
-    --muted: 240 8% 16%;
-    --muted-foreground: 240 5% 55%;
-    --accent: 252 56% 62%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 4 80% 50%;
+    --background: 240 8% 8%;
+    --foreground: 240 5% 92%;
+    --card: 240 8% 10%;
+    --card-foreground: 240 5% 92%;
+    --popover: 240 8% 10%;
+    --popover-foreground: 240 5% 92%;
+    --primary: 248 50% 65%;
+    --primary-foreground: 240 8% 8%;
+    --secondary: 240 6% 14%;
+    --secondary-foreground: 240 5% 92%;
+    --muted: 240 6% 14%;
+    --muted-foreground: 240 4% 60%;
+    --accent: 248 50% 65%;
+    --accent-foreground: 240 8% 8%;
+    --danger: 0 55% 55%;
+    --danger-foreground: 0 0% 100%;
+    --danger-muted: 0 30% 18%;
+    --warning: 35 70% 55%;
+    --warning-muted: 35 30% 18%;
+    --success: 152 40% 50%;
+    --success-muted: 152 25% 16%;
+    --destructive: 0 55% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 8% 18%;
-    --input: 240 8% 18%;
-    --ring: 252 56% 62%;
-    --sidebar-background: 240 10% 6%;
-    --sidebar-foreground: 240 5% 70%;
-    --sidebar-primary: 252 56% 62%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 8% 14%;
-    --sidebar-accent-foreground: 240 5% 85%;
-    --sidebar-border: 240 8% 16%;
-    --sidebar-ring: 252 56% 62%;
+    --border: 240 6% 18%;
+    --input: 240 6% 18%;
+    --ring: 248 50% 65%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    border-width: 0;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground;
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', 'DM Sans', system-ui, sans-serif;
+    font-family: inherit;
+    font-weight: 500;
+  }
+
+  /* Force the project to never use bolder than 500 */
+  .font-bold, .font-semibold, .font-extrabold, .font-black {
+    font-weight: 500 !important;
+  }
+}
+
+@layer components {
+  /* Hairline border helper — 0.5px low-contrast */
+  .hairline {
+    border: 0.5px solid hsl(var(--border));
+  }
+  .hairline-t { border-top: 0.5px solid hsl(var(--border)); }
+  .hairline-b { border-bottom: 0.5px solid hsl(var(--border)); }
+  .hairline-l { border-left: 0.5px solid hsl(var(--border)); }
+  .hairline-r { border-right: 0.5px solid hsl(var(--border)); }
+
+  /* Small tracked-out section label — the only allowed uppercase */
+  .label-eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+  .text-balance { text-wrap: balance; }
 }
