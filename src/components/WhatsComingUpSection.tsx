@@ -17,7 +17,7 @@ interface WhatsComingUpSectionProps {
 
 const DEFAULT_GROUPS: UpcomingGroup[] = [
   {
-    label: "This month",
+    label: "Your next task",
     amberPill: true,
     items: [{ title: "Gas Safety Certificate", property: "14 Elmwood Road", days: 81 }],
   },
