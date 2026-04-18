@@ -12,6 +12,7 @@ import {
 import {
   TASK_LIBRARY, type TaskCtx, type TaskCategory, type TaskAction,
 } from "@/data/taskLibrary";
+import { InventoryChecklistModal } from "./InventoryChecklistModal";
 
 const PURPLE = "#534AB7";
 const PURPLE_TINT = "#F7F5FD";
@@ -169,9 +170,16 @@ export function LifecycleTasksTab({
     }
   };
 
+  const [pendingInventory, setPendingInventory] = useState<{ taskId: string; filename: string } | null>(null);
+
   const handleAction = (taskId: string, action: TaskAction) => {
     if (action.kind === "upload") {
       const filename = `${action.vaultDoc.replace(/\s+/g, "_")}_${property.id}.pdf`;
+      // Inventory uploads must be confirmed item-by-item before filing.
+      if (action.vaultDoc === "Move-In Inventory") {
+        setPendingInventory({ taskId, filename });
+        return;
+      }
       onUploadDoc({ propId: property.id, taskId, vaultDoc: action.vaultDoc, filename });
       toast.success("Uploaded · filed in Vault", {
         description: `${action.vaultDoc} · ✦ key facts extracted.`,
@@ -284,6 +292,28 @@ export function LifecycleTasksTab({
           )}
         </section>
       </div>
+
+      {pendingInventory && (
+        <InventoryChecklistModal
+          propertyAddress={property.address}
+          filename={pendingInventory.filename}
+          onClose={() => setPendingInventory(null)}
+          onConfirm={({ confirmed, total, issues }) => {
+            const { taskId, filename } = pendingInventory;
+            onUploadDoc({ propId: property.id, taskId, vaultDoc: "Move-In Inventory", filename });
+            setPendingInventory(null);
+            if (issues.length > 0) {
+              toast.warning(`Filed with ${issues.length} flagged ${issues.length === 1 ? "item" : "items"}`, {
+                description: `${confirmed}/${total} confirmed · issues logged to evidence trail.`,
+              });
+            } else {
+              toast.success("Inventory confirmed & filed", {
+                description: `${confirmed}/${total} items confirmed · ✦ extracted to Vault.`,
+              });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

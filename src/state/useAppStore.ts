@@ -44,7 +44,7 @@ export interface ActivityEvent {
   propId: string;
   title: string;
   date: string; // human, e.g. "Today" or "3 Apr"
-  source: "task" | "vault" | "comms" | "system";
+  source: "task" | "vault" | "comms" | "system" | "review";
 }
 
 export interface Reminder {
@@ -52,6 +52,18 @@ export interface Reminder {
   taskId: string;
   setAt: number; // ms
   fireInDays: number;
+}
+
+export interface ReviewEntry {
+  id: string;
+  propId: string;
+  author: string;
+  avatar?: string;
+  rating: number;
+  date: string; // human
+  text: string;
+  role: "landlord" | "tenant";
+  createdAt: number;
 }
 
 export interface AppState {
@@ -63,6 +75,8 @@ export interface AppState {
   // docKey (`${propId}::${docName}`) -> AI-extracted facts
   extractedFacts: Record<string, ExtractedFacts>;
   events: ActivityEvent[];
+  // User-submitted reviews (newest first), keyed list
+  reviews: ReviewEntry[];
 }
 
 export interface AppActions {
@@ -79,6 +93,22 @@ export interface AppActions {
   setReminder: (propId: string, taskId: string, fireInDays?: number) => void;
   // Direct upload from the Vault tab (no task context). Files into vault.
   uploadDocDirect: (propId: string, vaultDoc: string, filename?: string) => void;
+  // File a Comms attachment into the Vault under a chosen category.
+  fileCommsAttachment: (args: {
+    propId: string;
+    vaultDoc: string;
+    filename: string;
+    sender: string;
+  }) => void;
+  // Add a review (landlord→tenant or tenant→landlord).
+  addReview: (args: {
+    propId: string;
+    author: string;
+    avatar?: string;
+    role: "landlord" | "tenant";
+    rating: number;
+    text: string;
+  }) => void;
 }
 
 const INITIAL_VAULTS: Record<string, VaultDoc[]> = {
@@ -107,6 +137,11 @@ const todayLabel = () => {
   return `${d.getDate()} ${d.toLocaleString("en-GB", { month: "short" })}`;
 };
 
+const todayLong = () => {
+  const d = new Date();
+  return `${d.getDate()} ${d.toLocaleString("en-GB", { month: "short" })} ${d.getFullYear()}`;
+};
+
 export function useAppStore(): AppState & AppActions {
   const [vaults, setVaults] = useState<Record<string, VaultDoc[]>>(INITIAL_VAULTS);
   const [completed, setCompleted] = useState<Record<string, boolean>>({ ...COMPLETED_INIT });
@@ -115,6 +150,7 @@ export function useAppStore(): AppState & AppActions {
   const [extractedFacts, setExtractedFacts] =
     useState<Record<string, ExtractedFacts>>(() => seedExtractedFacts());
   const [events, setEvents] = useState<ActivityEvent[]>([]);
+  const [reviews, setReviews] = useState<ReviewEntry[]>([]);
 
   const pushEvent = useCallback((e: Omit<ActivityEvent, "id" | "date">) => {
     setEvents(prev => [
@@ -208,8 +244,45 @@ export function useAppStore(): AppState & AppActions {
     pushEvent({ propId, title: `Reminder set · nudge in ${fireInDays} days`, source: "system" });
   }, [pushEvent]);
 
+  const fileCommsAttachment = useCallback<AppActions["fileCommsAttachment"]>(
+    ({ propId, vaultDoc, filename, sender }) => {
+      fileIntoVault(propId, vaultDoc);
+      const facts = extractFactsFor(propId, vaultDoc);
+      if (facts) {
+        setExtractedFacts(prev => ({ ...prev, [`${propId}::${vaultDoc}`]: facts }));
+      }
+      pushEvent({
+        propId,
+        title: `${filename} · From Comms · ${sender} → filed in Vault`,
+        source: "comms",
+      });
+    },
+    [fileIntoVault, pushEvent],
+  );
+
+  const addReview = useCallback<AppActions["addReview"]>(
+    ({ propId, author, avatar, role, rating, text }) => {
+      setReviews(prev => [
+        {
+          id: `rev-${Date.now()}`,
+          propId, author, avatar, role, rating, text,
+          date: todayLong(),
+          createdAt: Date.now(),
+        },
+        ...prev,
+      ]);
+      pushEvent({
+        propId,
+        title: `${role === "landlord" ? "You reviewed your tenant" : "New tenant review"} · ${rating.toFixed(1)} ★`,
+        source: "review",
+      });
+    },
+    [pushEvent],
+  );
+
   return {
-    vaults, completed, taskUploads, reminders, extractedFacts, events,
+    vaults, completed, taskUploads, reminders, extractedFacts, events, reviews,
     uploadDoc, uploadDocDirect, markTaskDone, unmarkTaskDone, setReminder,
+    fileCommsAttachment, addReview,
   };
 }

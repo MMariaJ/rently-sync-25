@@ -5,7 +5,7 @@ import { LifecycleVaultTab } from "./LifecycleVaultTab";
 import { CommsTab } from "./CommsTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { ReviewsTab } from "./ReviewsTab";
-import type { ActivityEvent, AppActions } from "@/state/useAppStore";
+import type { ActivityEvent, AppActions, ReviewEntry } from "@/state/useAppStore";
 import type { ExtractedFacts, LifecyclePhase } from "@/state/engines";
 import { getLifecyclePhase, getPhaseProgress } from "@/state/engines";
 
@@ -16,11 +16,14 @@ export interface PropertyOverviewProps {
   taskUploads: Record<string, string>;
   extractedFacts: Record<string, ExtractedFacts>;
   events: ActivityEvent[];
+  reviews: ReviewEntry[];
   onUploadDoc: AppActions["uploadDoc"];
   onUploadDocDirect: AppActions["uploadDocDirect"];
   onMarkTaskDone: AppActions["markTaskDone"];
   onUnmarkTaskDone: AppActions["unmarkTaskDone"];
   onSetReminder: AppActions["setReminder"];
+  onFileCommsAttachment: AppActions["fileCommsAttachment"];
+  onAddReview: AppActions["addReview"];
   onBack: () => void;
 }
 
@@ -183,9 +186,9 @@ const DATA_BY_ID: Record<string, OverviewData> = {
 const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Reviews"];
 
 export function PropertyOverview({
-  property, completed, allVaults, taskUploads, extractedFacts, events,
+  property, completed, allVaults, taskUploads, extractedFacts, events, reviews,
   onUploadDoc, onUploadDocDirect, onMarkTaskDone, onUnmarkTaskDone, onSetReminder,
-  onBack,
+  onFileCommsAttachment, onAddReview, onBack,
 }: PropertyOverviewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("Overview");
   const data = DATA_BY_ID[property.id] ?? DATA_BY_ID.p2;
@@ -270,11 +273,11 @@ export function PropertyOverview({
           onUploadDocDirect={onUploadDocDirect}
         />
       ) : activeTab === "Comms" ? (
-        <CommsTab property={property} />
+        <CommsTab property={property} onFileCommsAttachment={onFileCommsAttachment} />
       ) : activeTab === "Payments" ? (
         <PaymentsTab property={property} />
       ) : activeTab === "Reviews" ? (
-        <ReviewsTab property={property} />
+        <ReviewsTab property={property} reviews={reviews} onAddReview={onAddReview} />
       ) : (
         <>
           {/* Hero action card */}
