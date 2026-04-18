@@ -57,6 +57,8 @@ export default function Index() {
       return (
         <PropertyOverview
           property={prop}
+          completed={completed}
+          allVaults={allVaults}
           onBack={() => setActiveProp(null)}
         />
       );
