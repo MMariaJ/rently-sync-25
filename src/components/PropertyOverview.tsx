@@ -8,22 +8,35 @@ interface PropertyOverviewProps {
 
 type TabKey = "Overview" | "Tasks" | "Vault" | "Comms" | "Payments" | "Reviews";
 
+interface HmoTenant {
+  initials: string;
+  name: string;
+  rent: number;
+  since: string;
+  status: "Paid" | "Due soon" | "Late";
+  avatarBg: string;
+  avatarFg: string;
+}
+
 interface OverviewData {
   postcode: string;
   rating: number;
   reviewCount: number;
   rent: number;
+  isHmo?: boolean;
   hero: {
     headline: string;
     subline: string;
     cta: string;
+    tone?: "danger" | "neutral";
   };
-  tenant: {
+  tenant?: {
     initials: string;
     name: string;
     rating: number;
     since: string;
   };
+  hmoTenants?: HmoTenant[];
   activity: { title: string; date: string }[];
   upcoming: {
     label: string;
@@ -110,6 +123,41 @@ const DATA_BY_ID: Record<string, OverviewData> = {
       },
     ],
   },
+  p3: {
+    postcode: "Hackney E8 1QP",
+    rating: 4.5,
+    reviewCount: 6,
+    rent: 1870,
+    isHmo: true,
+    hero: {
+      headline: "AST renewal window opens in 95 days",
+      subline: "Three tenants, three contracts. We'll surface each one as their renewal approaches.",
+      cta: "Plan renewals",
+      tone: "neutral",
+    },
+    hmoTenants: [
+      { initials: "MC", name: "Mia Chen", rent: 650, since: "Jan 2026", status: "Paid",     avatarBg: "#E1ECF7", avatarFg: "#2E5A8C" },
+      { initials: "KA", name: "Kwame Asante", rent: 620, since: "Feb 2026", status: "Paid", avatarBg: "#EAF3DE", avatarFg: "#3B6D11" },
+      { initials: "SR", name: "Sofia Rossi",  rent: 600, since: "Mar 2026", status: "Due soon", avatarBg: "#F7E8DD", avatarFg: "#8C4A1F" },
+    ],
+    activity: [
+      { title: "Rent paid · £650 (Mia)", date: "1 Apr" },
+      { title: "Rent paid · £620 (Kwame)", date: "1 Apr" },
+      { title: "Message from Sofia · \u201CWhen is the boiler service?\u201D", date: "29 Mar" },
+      { title: "HMO licence inspection passed", date: "22 Mar" },
+      { title: "Sofia Rossi moved in", date: "1 Mar" },
+    ],
+    upcoming: [
+      {
+        label: "This year",
+        items: [
+          { title: "AST renewal — Mia Chen", sub: "Lease ends 31 Dec 2026", right: "95 days" },
+          { title: "Deposit Protection — Kwame", sub: "Re-protection window", right: "130 days" },
+          { title: "Gas Safety Certificate", sub: "Annual inspection", right: "248 days" },
+        ],
+      },
+    ],
+  },
 };
 
 const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Reviews"];
@@ -180,101 +228,113 @@ export function PropertyOverview({ property, onBack }: PropertyOverviewProps) {
       ) : (
         <>
           {/* Hero action card */}
-          <div
-            className="rounded-xl flex items-center justify-between gap-4"
-            style={{ backgroundColor: RED_BG, padding: "1rem 1.25rem" }}
-          >
-            <div className="min-w-0">
-              <p className="text-[15px] font-medium" style={{ color: RED_DARK }}>
-                {data.hero.headline}
-              </p>
-              <p className="text-[13px] mt-1" style={{ color: RED_MID }}>
-                {data.hero.subline}
-              </p>
-            </div>
-            <button
-              className="shrink-0 text-[13px] font-medium text-white"
-              style={{
-                backgroundColor: RED_DARK,
-                borderRadius: "8px",
-                padding: "8px 16px",
-              }}
-            >
-              {data.hero.cta}
-            </button>
-          </div>
+          {(() => {
+            const neutral = data.hero.tone === "neutral";
+            const bg = neutral ? "#F2F4F0" : RED_BG;
+            const headColor = neutral ? "#1F5A3A" : RED_DARK;
+            const subColor = neutral ? "#3A7355" : RED_MID;
+            const btnBg = neutral ? "#1F5A3A" : RED_DARK;
+            return (
+              <div
+                className="rounded-xl flex items-center justify-between gap-4"
+                style={{ backgroundColor: bg, padding: "1rem 1.25rem" }}
+              >
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium" style={{ color: headColor }}>
+                    {data.hero.headline}
+                  </p>
+                  <p className="text-[13px] mt-1" style={{ color: subColor }}>
+                    {data.hero.subline}
+                  </p>
+                </div>
+                <button
+                  className="shrink-0 text-[13px] font-medium text-white"
+                  style={{ backgroundColor: btnBg, borderRadius: "8px", padding: "8px 16px" }}
+                >
+                  {data.hero.cta}
+                </button>
+              </div>
+            );
+          })()}
 
           {/* Lifecycle tracker */}
-          <div className="bg-card hairline rounded-xl" style={{ padding: "1.25rem" }}>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[13px] text-muted-foreground">Your lifecycle tasks</span>
-              <span className="text-[12px] text-muted-foreground">1 open in 1 stage</span>
-            </div>
-
-            <div className="flex" style={{ gap: "8px" }}>
-              {[
-                { name: "Pre-move-in", count: "1 task open", active: true },
-                { name: "Move-in", count: "no open tasks", active: false },
-                { name: "Active tenancy", count: "ongoing", active: false },
-                { name: "Move-out", count: "no open tasks", active: false },
-              ].map((s) => (
-                <div key={s.name} className="flex-1 flex flex-col" style={{ gap: "6px" }}>
-                  <div
-                    style={{
-                      height: "4px",
-                      borderRadius: "2px",
-                      backgroundColor: s.active ? PURPLE : "hsl(var(--border))",
-                    }}
-                  />
-                  <span
-                    className="text-[12px]"
-                    style={{
-                      color: s.active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
-                      fontWeight: s.active ? 500 : 400,
-                    }}
-                  >
-                    {s.name}
-                  </span>
-                  <span
-                    className="text-[11px]"
-                    style={{
-                      color: s.active
-                        ? "hsl(var(--muted-foreground))"
-                        : "hsl(var(--muted-foreground) / 0.7)",
-                    }}
-                  >
-                    {s.count}
-                  </span>
+          {(() => {
+            const isHmo = !!data.isHmo;
+            const stages = isHmo
+              ? [
+                  { name: "Pre-move-in", count: "all done", active: false },
+                  { name: "Move-in", count: "all done", active: false },
+                  { name: "Active tenancy", count: "ongoing", active: true },
+                  { name: "Move-out", count: "no open tasks", active: false },
+                ]
+              : [
+                  { name: "Pre-move-in", count: "1 task open", active: true },
+                  { name: "Move-in", count: "no open tasks", active: false },
+                  { name: "Active tenancy", count: "ongoing", active: false },
+                  { name: "Move-out", count: "no open tasks", active: false },
+                ];
+            const summary = isHmo ? "All tenancies in active stage" : "1 open in 1 stage";
+            const nextUp = isHmo ? "Schedule annual gas safety inspection" : "Set initial meter readings";
+            return (
+              <div className="bg-card hairline rounded-xl" style={{ padding: "1.25rem" }}>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[13px] text-muted-foreground">Your lifecycle tasks</span>
+                  <span className="text-[12px] text-muted-foreground">{summary}</span>
                 </div>
-              ))}
-            </div>
 
-            <div
-              className="hairline-t flex items-center justify-between gap-3"
-              style={{ marginTop: "14px", paddingTop: "14px" }}
-            >
-              <div className="min-w-0">
-                <p className="text-[12px] text-muted-foreground">Next up</p>
-                <p className="text-[14px] font-medium text-foreground mt-0.5">
-                  Set initial meter readings
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  className="text-[13px] text-foreground hairline rounded-lg"
-                  style={{ padding: "6px 14px" }}
+                <div className="flex" style={{ gap: "8px" }}>
+                  {stages.map((s) => (
+                    <div key={s.name} className="flex-1 flex flex-col" style={{ gap: "6px" }}>
+                      <div
+                        style={{
+                          height: "4px",
+                          borderRadius: "2px",
+                          backgroundColor: s.active ? PURPLE : "hsl(var(--border))",
+                        }}
+                      />
+                      <span
+                        className="text-[12px]"
+                        style={{
+                          color: s.active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                          fontWeight: s.active ? 500 : 400,
+                        }}
+                      >
+                        {s.name}
+                      </span>
+                      <span
+                        className="text-[11px]"
+                        style={{
+                          color: s.active
+                            ? "hsl(var(--muted-foreground))"
+                            : "hsl(var(--muted-foreground) / 0.7)",
+                        }}
+                      >
+                        {s.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div
+                  className="hairline-t flex items-center justify-between gap-3"
+                  style={{ marginTop: "14px", paddingTop: "14px" }}
                 >
-                  Mark done
-                </button>
-                <button
-                  className="text-[13px] text-muted-foreground hairline rounded-lg"
-                  style={{ padding: "6px 10px" }}
-                >
-                  See all tasks →
-                </button>
+                  <div className="min-w-0">
+                    <p className="text-[12px] text-muted-foreground">Next up</p>
+                    <p className="text-[14px] font-medium text-foreground mt-0.5">{nextUp}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button className="text-[13px] text-foreground hairline rounded-lg" style={{ padding: "6px 14px" }}>
+                      Mark done
+                    </button>
+                    <button className="text-[13px] text-muted-foreground hairline rounded-lg" style={{ padding: "6px 10px" }}>
+                      See all tasks →
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Two-column body */}
           <div className="grid gap-4" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
@@ -289,49 +349,95 @@ export function PropertyOverview({ property, onBack }: PropertyOverviewProps) {
                   marginBottom: "10px",
                 }}
               >
-                Tenant
+                {data.isHmo ? `Tenants · ${data.hmoTenants?.length ?? 0}` : "Tenant"}
               </h2>
 
               <div className="bg-card hairline rounded-xl" style={{ padding: "14px 16px" }}>
-                <div className="flex items-center" style={{ gap: "12px", marginBottom: "12px" }}>
-                  <div
-                    className="rounded-full flex items-center justify-center shrink-0"
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      backgroundColor: "#E1ECF7",
-                      color: "#2E5A8C",
-                      fontSize: "14px",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {data.tenant.initials}
+                {data.isHmo && data.hmoTenants ? (
+                  <div className="flex flex-col" style={{ gap: "10px", marginBottom: "12px" }}>
+                    {data.hmoTenants.map((t, idx) => {
+                      const statusColor =
+                        t.status === "Paid" ? "#3B6D11" :
+                        t.status === "Late" ? "#A32D2D" : "#8C4A1F";
+                      const statusBg =
+                        t.status === "Paid" ? "#EAF3DE" :
+                        t.status === "Late" ? "#FBECEC" : "#F7E8DD";
+                      return (
+                        <div
+                          key={t.name}
+                          className={`flex items-center gap-3 ${idx > 0 ? "hairline-t" : ""}`}
+                          style={idx > 0 ? { paddingTop: "10px" } : undefined}
+                        >
+                          <div
+                            className="rounded-full flex items-center justify-center shrink-0"
+                            style={{
+                              width: "36px", height: "36px",
+                              backgroundColor: t.avatarBg, color: t.avatarFg,
+                              fontSize: "12px", fontWeight: 500,
+                            }}
+                          >
+                            {t.initials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[14px] font-medium text-foreground">{t.name}</span>
+                              <span
+                                className="text-[11px]"
+                                style={{
+                                  color: statusColor, backgroundColor: statusBg,
+                                  padding: "2px 8px", borderRadius: "8px",
+                                }}
+                              >
+                                {t.status}
+                              </span>
+                            </div>
+                            <p className="text-[12px] text-muted-foreground mt-0.5 tabular-nums">
+                              £{t.rent}/mo · since {t.since}
+                            </p>
+                          </div>
+                          <button className="text-[12px] text-muted-foreground shrink-0 hover:text-foreground transition-colors">
+                            Message →
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[14px] font-medium text-foreground">
-                        {data.tenant.name}
-                      </span>
-                      <span
-                        className="text-[11px]"
-                        style={{
-                          color: "#3B6D11",
-                          backgroundColor: "#EAF3DE",
-                          padding: "2px 8px",
-                          borderRadius: "8px",
-                        }}
-                      >
-                        Verified
-                      </span>
+                ) : data.tenant ? (
+                  <div className="flex items-center" style={{ gap: "12px", marginBottom: "12px" }}>
+                    <div
+                      className="rounded-full flex items-center justify-center shrink-0"
+                      style={{
+                        width: "44px", height: "44px",
+                        backgroundColor: "#E1ECF7", color: "#2E5A8C",
+                        fontSize: "14px", fontWeight: 500,
+                      }}
+                    >
+                      {data.tenant.initials}
                     </div>
-                    <p className="text-[12px] text-muted-foreground mt-1 tabular-nums">
-                      {data.tenant.rating.toFixed(1)} ★ · tenant since {data.tenant.since}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[14px] font-medium text-foreground">
+                          {data.tenant.name}
+                        </span>
+                        <span
+                          className="text-[11px]"
+                          style={{
+                            color: "#3B6D11", backgroundColor: "#EAF3DE",
+                            padding: "2px 8px", borderRadius: "8px",
+                          }}
+                        >
+                          Verified
+                        </span>
+                      </div>
+                      <p className="text-[12px] text-muted-foreground mt-1 tabular-nums">
+                        {data.tenant.rating.toFixed(1)} ★ · tenant since {data.tenant.since}
+                      </p>
+                    </div>
+                    <button className="text-[12px] text-muted-foreground shrink-0 hover:text-foreground transition-colors">
+                      Message →
+                    </button>
                   </div>
-                  <button className="text-[12px] text-muted-foreground shrink-0 hover:text-foreground transition-colors">
-                    Message →
-                  </button>
-                </div>
+                ) : null}
 
                 <div className="hairline-t" style={{ paddingTop: "12px" }}>
                   <p
