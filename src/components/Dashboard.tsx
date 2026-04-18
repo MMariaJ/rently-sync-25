@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { ComplianceDonut } from "./ComplianceDonut";
 import { DeadlineCalendar, type DeadlineDate } from "./DeadlineCalendar";
+import { HeroHealthyCard } from "./HeroHealthyCard";
 import {
   TENANT_INFO, HMO_TENANTS, VAULT_INIT,
   LANDLORD_PROFILE, DOC_VALIDITY_BY_PROP,
@@ -55,8 +56,24 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
     return "Good evening";
   })();
 
+  const isHealthy = criticalAlerts.length === 0;
+  const itemsOnTrack = portfolio.reduce((s, p) => {
+    const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
+    return s + Object.values(validity).filter((v) => v.status !== "expired").length;
+  }, 0);
+  const nextDeadlineDays = allDeadlines[0]?.days ?? 0;
+
   return (
     <div className="space-y-8 pb-12">
+      {isHealthy && (
+        <HeroHealthyCard
+          itemsOnTrack={itemsOnTrack}
+          nextDeadlineDays={nextDeadlineDays}
+          rating={4.7}
+          reviewCount={14}
+        />
+      )}
+
       {/* Greeting — no card, just text */}
       <div>
         <h1 className="text-[22px] text-foreground tracking-tight font-medium">
