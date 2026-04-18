@@ -5,14 +5,15 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Check, AlertTriangle } from "lucide-react";
 import {
-  PORTFOLIO, TENANT_INFO, PROP_CONTRACT, HMO_TENANTS,
+  PORTFOLIO, TENANT_INFO, PROP_CONTRACT, HMO_TENANTS, VAULT_INIT,
   type Property, type VaultDoc,
 } from "@/data/constants";
 import {
   TASK_LIBRARY, type TaskCtx, type TaskCategory, type TaskAction,
 } from "@/data/taskLibrary";
-import { InventoryChecklistModal } from "./InventoryChecklistModal";
+import type { ExtractedFacts } from "@/state/engines";
 
 const PURPLE = "#534AB7";
 const PURPLE_TINT = "#F7F5FD";
@@ -28,6 +29,7 @@ interface LifecycleTasksTabProps {
   completed: Record<string, boolean>;
   allVaults: Record<string, VaultDoc[]>;
   taskUploads: Record<string, string>;
+  extractedFacts?: Record<string, ExtractedFacts>;
   onUploadDoc: (args: { propId: string; taskId: string; vaultDoc: string; filename?: string }) => void;
   onMarkTaskDone: (propId: string, taskId: string, taskTitle: string) => void;
   onUnmarkTaskDone: (propId: string, taskId: string) => void;
@@ -55,18 +57,32 @@ const CATEGORY_ORDER: TaskCategory[] = [
   "recommended",
 ];
 
-// Per-property task selection. We pick a sensible set per property state.
-function tasksForProperty(p: Property): string[] {
+// === Lifecycle stages =======================================================
+
+type StageName = "Pre-move-in" | "Move-in" | "Active tenancy" | "Move-out";
+const STAGE_ORDER: StageName[] = ["Pre-move-in", "Move-in", "Active tenancy", "Move-out"];
+
+// Per-property tasks broken down by stage. Stages without tasks render an empty
+// state but are still navigable so the landlord can preview what's coming.
+function tasksForStage(p: Property, stage: StageName): string[] {
   if (p.id === "p1") {
-    // 14 Elmwood Road — pre-move-in: full statutory pack
-    return ["l1", "l5", "l2", "l3", "l4", "l6", "l7"];
+    if (stage === "Pre-move-in") return ["l1", "l5", "l2", "l3", "l4", "l6", "l7"];
+    if (stage === "Active tenancy") return ["l13", "l22"];
+    return [];
   }
   if (p.id === "p2") {
-    // 7 Crane Wharf — active tenancy with expired EPC
-    return ["l22", "l13", "l12", "l15"];
+    if (stage === "Active tenancy") return ["l22", "l13", "l12", "l15"];
+    return [];
   }
-  // p3 — HMO Saffron Court — active across 3 ASTs
-  return ["l_hmo1", "l13", "l22", "l12", "l15"];
+  // p3 — HMO
+  if (stage === "Active tenancy") return ["l_hmo1", "l13", "l22", "l12", "l15"];
+  return [];
+}
+
+// The stage we treat as the property's "natural" current stage when no
+// override is set. p1 starts in Pre-move-in; p2/p3 are mid-tenancy.
+function naturalStage(p: Property): StageName {
+  return p.id === "p1" ? "Pre-move-in" : "Active tenancy";
 }
 
 // Build the context object from property + tenant data
@@ -95,12 +111,18 @@ function buildCtx(p: Property): TaskCtx {
 }
 
 export function LifecycleTasksTab({
-  property, completed, taskUploads,
+  property, completed, taskUploads, allVaults, extractedFacts,
   onUploadDoc, onMarkTaskDone, onUnmarkTaskDone, onSetReminder,
 }: LifecycleTasksTabProps) {
   const ctx = useMemo(() => buildCtx(property), [property]);
+  const vault = allVaults[property.id] || VAULT_INIT;
 
-  const taskIds = tasksForProperty(property);
+  // The currently viewed stage. Defaults to the property's natural stage,
+  // but the user can advance with "Next stage →" once everything is done.
+  const [stage, setStage] = useState<StageName>(naturalStage(property));
+  const stageIdx = STAGE_ORDER.indexOf(stage);
+
+  const taskIds = tasksForStage(property, stage);
 
   // Resolve tasks, decide done state, sort by urgency
   const resolved: ResolvedTask[] = useMemo(() => {
@@ -154,28 +176,48 @@ export function LifecycleTasksTab({
 
   const doneCount = resolved.filter((t) => t.done).length;
   const totalCount = resolved.length;
-
-  // Stage label used in the lifecycle tracker bottom row
-  const stageLabel = property.id === "p1" ? "Pre-move-in tasks" : "Active tenancy tasks";
+  const allStageDone = totalCount > 0 && doneCount === totalCount;
 
   // --- handlers ------------------------------------------------------------
+
+  // When we tick a task that has an associated vaultDoc upload action, also
+  // file that doc into the Vault so it shows up under "Filed & current".
+  // This means the tick checkbox isn't just bookkeeping — it actually reflects
+  // a state change across the property.
+  const fileVaultDocForTask = (id: string) => {
+    const lib = TASK_LIBRARY[id];
+    if (!lib) return false;
+    const uploadAction = lib.actions.find((a) => a.kind === "upload");
+    if (!uploadAction || uploadAction.kind !== "upload") return false;
+    const filename = `${uploadAction.vaultDoc.replace(/\s+/g, "_")}_${property.id}.pdf`;
+    onUploadDoc({ propId: property.id, taskId: id, vaultDoc: uploadAction.vaultDoc, filename });
+    return true;
+  };
 
   const toggleDone = (id: string) => {
     const wasDone = completed[`${property.id}_${id}`] || !!taskUploads[`${property.id}_${id}`];
     if (wasDone) {
       onUnmarkTaskDone(property.id, id);
       toast("Marked as not done", { description: titleFor(id) });
-    } else {
+      return;
+    }
+    // If this task has a vaultDoc, route through uploadDoc so the doc lands in
+    // the Vault as Filed & current and key facts get extracted.
+    const filed = fileVaultDocForTask(id);
+    if (!filed) {
       onMarkTaskDone(property.id, id, titleFor(id));
     }
   };
 
+  // Inline inventory checklist — opens in the right-hand detail column,
+  // not a modal. Only shown for the Move-In Inventory upload.
   const [pendingInventory, setPendingInventory] = useState<{ taskId: string; filename: string } | null>(null);
 
   const handleAction = (taskId: string, action: TaskAction) => {
     if (action.kind === "upload") {
       const filename = `${action.vaultDoc.replace(/\s+/g, "_")}_${property.id}.pdf`;
-      // Inventory uploads must be confirmed item-by-item before filing.
+      // Inventory uploads must be confirmed item-by-item before filing —
+      // shown inline in the right column instead of a pop-up modal.
       if (action.vaultDoc === "Move-In Inventory") {
         setPendingInventory({ taskId, filename });
         return;
@@ -194,6 +236,25 @@ export function LifecycleTasksTab({
     }
   };
 
+  const goNextStage = () => {
+    if (stageIdx < STAGE_ORDER.length - 1) {
+      setStage(STAGE_ORDER[stageIdx + 1]);
+      setSelectedId(null);
+      setPendingInventory(null);
+      toast.success(`Moved to ${STAGE_ORDER[stageIdx + 1]}`);
+    }
+  };
+
+  const goPrevStage = () => {
+    if (stageIdx > 0) {
+      setStage(STAGE_ORDER[stageIdx - 1]);
+      setSelectedId(null);
+      setPendingInventory(null);
+    }
+  };
+
+  const stageLabel = `${stage} tasks`;
+
   // --- render --------------------------------------------------------------
 
   return (
@@ -201,9 +262,14 @@ export function LifecycleTasksTab({
       {/* Lifecycle tracker */}
       <LifecycleTracker
         property={property}
+        stage={stage}
         doneCount={doneCount}
         totalCount={totalCount}
         mostUrgent={mostUrgent}
+        canPrev={stageIdx > 0}
+        canNext={stageIdx < STAGE_ORDER.length - 1 && (totalCount === 0 || allStageDone)}
+        onPrev={goPrevStage}
+        onNext={goNextStage}
       />
 
       {/* Two-column body */}
@@ -220,52 +286,67 @@ export function LifecycleTasksTab({
             <span className="text-[12px] text-muted-foreground">Sort: urgency ▾</span>
           </div>
 
-          <div className="bg-card hairline rounded-xl" style={{ padding: "4px 0" }}>
-            {grouped.map((group, gi) => (
-              <div
-                key={group.category}
-                className={gi > 0 ? "hairline-t" : ""}
-                style={gi > 0 ? { marginTop: "4px" } : undefined}
-              >
-                <p
-                  className="font-medium"
-                  style={{
-                    fontSize: "11px",
-                    letterSpacing: "0.5px",
-                    textTransform: "uppercase",
-                    color: "hsl(var(--muted-foreground) / 0.7)",
-                    padding: "10px 16px 4px 16px",
-                  }}
+          {grouped.length === 0 ? (
+            <div className="bg-card hairline rounded-xl p-8 text-center">
+              <p className="text-[13px] text-muted-foreground">
+                No tasks queued for this stage yet.
+              </p>
+              <p className="text-[12px] text-muted-foreground mt-1" style={{ color: "hsl(var(--muted-foreground) / 0.7)" }}>
+                {stageIdx < STAGE_ORDER.length - 1
+                  ? `We'll surface ${STAGE_ORDER[stageIdx + 1].toLowerCase()} tasks when relevant.`
+                  : "You've reached the end of the lifecycle."}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-card hairline rounded-xl" style={{ padding: "4px 0" }}>
+              {grouped.map((group, gi) => (
+                <div
+                  key={group.category}
+                  className={gi > 0 ? "hairline-t" : ""}
+                  style={gi > 0 ? { marginTop: "4px" } : undefined}
                 >
-                  {CATEGORY_LABEL[group.category]}
-                </p>
+                  <p
+                    className="font-medium"
+                    style={{
+                      fontSize: "11px",
+                      letterSpacing: "0.5px",
+                      textTransform: "uppercase",
+                      color: "hsl(var(--muted-foreground) / 0.7)",
+                      padding: "10px 16px 4px 16px",
+                    }}
+                  >
+                    {CATEGORY_LABEL[group.category]}
+                  </p>
 
-                {group.tasks.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    selected={task.id === effectiveSelected}
-                    onSelect={() => setSelectedId(task.id)}
-                    onToggleDone={() => toggleDone(task.id)}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
+                  {group.tasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      selected={task.id === effectiveSelected}
+                      onSelect={() => { setSelectedId(task.id); setPendingInventory(null); }}
+                      onToggleDone={() => toggleDone(task.id)}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
 
-          <p
-            className="text-center"
-            style={{
-              fontSize: "12px",
-              color: "hsl(var(--muted-foreground) / 0.7)",
-              marginTop: "10px",
-            }}
-          >
-            {doneCount} of {totalCount} done ✦
-          </p>
+          {totalCount > 0 && (
+            <p
+              className="text-center"
+              style={{
+                fontSize: "12px",
+                color: "hsl(var(--muted-foreground) / 0.7)",
+                marginTop: "10px",
+              }}
+            >
+              {doneCount} of {totalCount} done ✦
+            </p>
+          )}
         </section>
 
-        {/* RIGHT — Task detail panel */}
+        {/* RIGHT — Task detail panel (or inline inventory checklist) */}
         <section>
           <h2
             className="font-medium text-muted-foreground"
@@ -274,46 +355,49 @@ export function LifecycleTasksTab({
               marginBottom: "10px",
             }}
           >
-            Task detail
+            {pendingInventory ? "Confirm inventory" : "Task detail"}
           </h2>
 
-          {effectiveSelected && TASK_LIBRARY[effectiveSelected] ? (
+          {pendingInventory ? (
+            <InlineInventoryChecklist
+              filename={pendingInventory.filename}
+              propertyAddress={property.address}
+              onCancel={() => setPendingInventory(null)}
+              onConfirm={({ confirmed, total, issues }) => {
+                const { taskId, filename } = pendingInventory;
+                onUploadDoc({ propId: property.id, taskId, vaultDoc: "Move-In Inventory", filename });
+                setPendingInventory(null);
+                if (issues.length > 0) {
+                  toast.warning(`Filed with ${issues.length} flagged ${issues.length === 1 ? "item" : "items"}`, {
+                    description: `${confirmed}/${total} confirmed · issues logged to evidence trail.`,
+                  });
+                } else {
+                  toast.success("Inventory confirmed & filed", {
+                    description: `${confirmed}/${total} items confirmed · ✦ extracted to Vault.`,
+                  });
+                }
+              }}
+            />
+          ) : effectiveSelected && TASK_LIBRARY[effectiveSelected] ? (
             <TaskDetailPanel
               taskId={effectiveSelected}
               ctx={ctx}
               uploaded={taskUploads[`${property.id}_${effectiveSelected}`]}
               done={resolved.find((t) => t.id === effectiveSelected)?.done ?? false}
+              extractedFacts={extractedFacts}
+              vault={vault}
+              propertyId={property.id}
               onAction={(a) => handleAction(effectiveSelected, a)}
             />
           ) : (
             <div className="bg-card hairline rounded-xl p-8 text-center">
-              <p className="text-[13px] text-muted-foreground">Select a task to see details.</p>
+              <p className="text-[13px] text-muted-foreground">
+                {grouped.length === 0 ? "No task selected." : "Select a task to see details."}
+              </p>
             </div>
           )}
         </section>
       </div>
-
-      {pendingInventory && (
-        <InventoryChecklistModal
-          propertyAddress={property.address}
-          filename={pendingInventory.filename}
-          onClose={() => setPendingInventory(null)}
-          onConfirm={({ confirmed, total, issues }) => {
-            const { taskId, filename } = pendingInventory;
-            onUploadDoc({ propId: property.id, taskId, vaultDoc: "Move-In Inventory", filename });
-            setPendingInventory(null);
-            if (issues.length > 0) {
-              toast.warning(`Filed with ${issues.length} flagged ${issues.length === 1 ? "item" : "items"}`, {
-                description: `${confirmed}/${total} confirmed · issues logged to evidence trail.`,
-              });
-            } else {
-              toast.success("Inventory confirmed & filed", {
-                description: `${confirmed}/${total} items confirmed · ✦ extracted to Vault.`,
-              });
-            }
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -321,33 +405,39 @@ export function LifecycleTasksTab({
 // === Lifecycle tracker ======================================================
 
 function LifecycleTracker({
-  property, doneCount, totalCount, mostUrgent,
+  property, stage, doneCount, totalCount, mostUrgent, canPrev, canNext, onPrev, onNext,
 }: {
   property: Property;
+  stage: StageName;
   doneCount: number;
   totalCount: number;
   mostUrgent: ResolvedTask | null;
+  canPrev: boolean;
+  canNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
 }) {
-  const stages = property.id === "p1"
-    ? [
-        { name: "Pre-move-in", count: `${totalCount - doneCount} tasks open`, active: true },
-        { name: "Move-in", count: "no open tasks", active: false },
-        { name: "Active tenancy", count: "ongoing", active: false },
-        { name: "Move-out", count: "no open tasks", active: false },
-      ]
-    : [
-        { name: "Pre-move-in", count: "all done", active: false },
-        { name: "Move-in", count: "all done", active: false },
-        { name: "Active tenancy", count: `${totalCount - doneCount} open`, active: true },
-        { name: "Move-out", count: "no open tasks", active: false },
-      ];
+  // Build per-stage display from the task selection so the dots reflect the
+  // actual lifecycle, not a hardcoded preset.
+  const stages = STAGE_ORDER.map((s) => {
+    const ids = tasksForStage(property, s);
+    const isCurrent = s === stage;
+    const count = ids.length === 0
+      ? "—"
+      : isCurrent
+        ? `${totalCount - doneCount} open`
+        : `${ids.length} task${ids.length === 1 ? "" : "s"}`;
+    return { name: s, count, active: isCurrent };
+  });
 
   return (
     <div className="bg-card hairline rounded-xl" style={{ padding: "1.25rem" }}>
       <div className="flex items-center justify-between mb-4">
         <span className="text-[13px] text-muted-foreground">Your lifecycle tasks</span>
         <span className="text-[12px] text-muted-foreground">
-          {doneCount} of {totalCount} done · {totalCount - doneCount} to go
+          {totalCount === 0
+            ? "Nothing queued in this stage"
+            : `${doneCount} of ${totalCount} done · ${totalCount - doneCount} to go`}
         </span>
       </div>
 
@@ -388,14 +478,16 @@ function LifecycleTracker({
         className="hairline-t flex items-center justify-between gap-3"
         style={{ marginTop: "14px", paddingTop: "14px" }}
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-[12px] text-muted-foreground">Most urgent</p>
           <p className="text-[14px] font-medium text-foreground mt-0.5">
             {mostUrgent
               ? `${mostUrgent.title}${mostUrgent.daysRemaining !== null
                   ? ` · ${formatDays(mostUrgent.daysRemaining)}`
                   : ""}`
-              : "All caught up"}
+              : totalCount === 0
+                ? "Nothing in this stage"
+                : "All caught up"}
           </p>
         </div>
         {mostUrgent && TASK_LIBRARY[mostUrgent.id]?.statutory && (
@@ -412,6 +504,25 @@ function LifecycleTracker({
             Statutory · {mostUrgent.daysRemaining !== null ? `${Math.abs(mostUrgent.daysRemaining)}-day window` : "ongoing"}
           </span>
         )}
+        <div className="flex items-center shrink-0" style={{ gap: "6px" }}>
+          <button
+            onClick={onPrev}
+            disabled={!canPrev}
+            className="text-[12px] hairline rounded-lg disabled:opacity-40"
+            style={{ padding: "6px 10px", color: "hsl(var(--muted-foreground))" }}
+          >
+            ← Previous
+          </button>
+          <button
+            onClick={onNext}
+            disabled={!canNext}
+            className="text-[13px] font-medium rounded-lg text-white disabled:opacity-40"
+            style={{ padding: "6px 14px", backgroundColor: PURPLE }}
+            title={canNext ? "Move to the next stage" : "Finish current-stage tasks to unlock"}
+          >
+            Next stage →
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -500,12 +611,15 @@ function TaskRow({ task, selected, onSelect, onToggleDone }: {
 // === Detail panel ===========================================================
 
 function TaskDetailPanel({
-  taskId, ctx, uploaded, done, onAction,
+  taskId, ctx, uploaded, done, extractedFacts, vault, propertyId, onAction,
 }: {
   taskId: string;
   ctx: TaskCtx;
   uploaded?: string;
   done: boolean;
+  extractedFacts?: Record<string, ExtractedFacts>;
+  vault: VaultDoc[];
+  propertyId: string;
   onAction: (a: TaskAction) => void;
 }) {
   const lib = TASK_LIBRARY[taskId];
@@ -513,6 +627,16 @@ function TaskDetailPanel({
   const description = lib.description(ctx);
   const consequence = lib.consequence?.(ctx);
   const contextRows = lib.contextRows(ctx);
+
+  // Surface the AI-extracted facts whenever the linked vault doc has been filed —
+  // even if the upload happened from elsewhere (e.g. tick the task without an upload,
+  // and the doc is already in the vault from a previous upload).
+  const uploadAction = lib.actions.find((a) => a.kind === "upload");
+  const linkedDocName = uploadAction?.kind === "upload" ? uploadAction.vaultDoc : undefined;
+  const linkedDoc = linkedDocName ? vault.find((d) => d.name === linkedDocName) : undefined;
+  const filed = linkedDoc?.status === "uploaded";
+  const facts = linkedDocName ? extractedFacts?.[`${propertyId}::${linkedDocName}`] : undefined;
+  const filedFilename = uploaded ?? (filed && linkedDocName ? `${linkedDocName.replace(/\s+/g, "_")}.pdf` : undefined);
 
   return (
     <div className="bg-card hairline rounded-xl" style={{ padding: "16px" }}>
@@ -567,8 +691,45 @@ function TaskDetailPanel({
         {description}
       </p>
 
+      {/* AI-extracted summary — shown as soon as the linked vault doc is filed */}
+      {facts && (
+        <div
+          style={{
+            backgroundColor: "#F7F5FD",
+            border: `0.5px solid ${PURPLE}33`,
+            borderRadius: "8px",
+            padding: "10px 12px",
+            marginBottom: "16px",
+          }}
+        >
+          <p
+            className="font-medium"
+            style={{
+              fontSize: "11px", color: PURPLE,
+              letterSpacing: "0.3px", textTransform: "uppercase",
+              marginBottom: "6px",
+            }}
+          >
+            ✦ Key facts captured
+          </p>
+          <p style={{ fontSize: "13px", color: "hsl(var(--foreground))", lineHeight: 1.5, marginBottom: facts.fields ? "8px" : 0 }}>
+            {facts.summary}
+          </p>
+          {facts.fields && Object.keys(facts.fields).length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+              {Object.entries(facts.fields).map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between gap-2" style={{ fontSize: "12px" }}>
+                  <span className="text-muted-foreground capitalize">{k.replace(/([A-Z])/g, " $1").toLowerCase()}</span>
+                  <span className="text-foreground tabular-nums text-right truncate">{v}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* d) If missed */}
-      {consequence && (
+      {consequence && !done && (
         <div
           style={{
             backgroundColor: RED_BG,
@@ -649,7 +810,7 @@ function TaskDetailPanel({
             <span className="text-foreground tabular-nums text-right">{r.value}</span>
           </div>
         ))}
-        {uploaded && (
+        {filedFilename && (
           <div
             className="flex items-center justify-between gap-3"
             style={{
@@ -660,14 +821,14 @@ function TaskDetailPanel({
               borderRadius: "6px",
             }}
           >
-            <span style={{ color: "#3B6D11" }}>📎 Attached</span>
-            <span className="tabular-nums" style={{ color: "#3B6D11" }}>{uploaded}</span>
+            <span style={{ color: "#3B6D11" }}>📎 Filed</span>
+            <span className="tabular-nums truncate" style={{ color: "#3B6D11" }}>{filedFilename}</span>
           </div>
         )}
       </div>
 
       {/* g) Action stack */}
-      <ActionStack actions={lib.actions} onAction={onAction} hasUpload={!!uploaded} />
+      <ActionStack actions={lib.actions} onAction={onAction} hasUpload={!!filedFilename} />
     </div>
   );
 }
@@ -734,6 +895,150 @@ function ActionStack({
         </div>
       )}
     </>
+  );
+}
+
+// === Inline inventory checklist =============================================
+// Renders in the right-hand detail column (not a modal) so it lives in the
+// same surface as the task detail. Same item structure as the old modal —
+// landlord ticks each room item OK or flags an issue, then files the doc.
+
+const INVENTORY_ROOMS: { room: string; items: string[] }[] = [
+  { room: "Kitchen", items: ["Oven & hob", "Fridge / freezer", "Dishwasher", "Cupboards & worktops", "Flooring"] },
+  { room: "Living room", items: ["Sofa", "Carpet / flooring", "Curtains / blinds", "Light fittings"] },
+  { room: "Bedroom", items: ["Bed frame", "Mattress", "Wardrobe", "Carpet / flooring"] },
+  { room: "Bathroom", items: ["Bath / shower", "Toilet", "Sink & taps", "Tiles & sealant"] },
+  { room: "Hallway & exterior", items: ["Front door & locks", "Smoke alarm", "CO alarm", "Meter cupboard"] },
+];
+
+function InlineInventoryChecklist({
+  filename, propertyAddress, onCancel, onConfirm,
+}: {
+  filename: string;
+  propertyAddress: string;
+  onCancel: () => void;
+  onConfirm: (s: { confirmed: number; total: number; issues: string[] }) => void;
+}) {
+  type ItemState = "ok" | "issue" | null;
+  const all = useMemo(
+    () => INVENTORY_ROOMS.flatMap((r) => r.items.map((i) => `${r.room}: ${i}`)),
+    [],
+  );
+  const [state, setState] = useState<Record<string, ItemState>>({});
+
+  const counts = useMemo(() => {
+    let ok = 0, issue = 0;
+    for (const k of all) {
+      if (state[k] === "ok") ok++;
+      if (state[k] === "issue") issue++;
+    }
+    return { ok, issue, total: all.length };
+  }, [state, all]);
+
+  const allReviewed = counts.ok + counts.issue === counts.total;
+
+  const setAllOk = () => {
+    const next: Record<string, ItemState> = {};
+    for (const k of all) next[k] = "ok";
+    setState(next);
+  };
+
+  const handleConfirm = () => {
+    const issues = all.filter((k) => state[k] === "issue");
+    onConfirm({ confirmed: counts.ok, total: counts.total, issues });
+  };
+
+  return (
+    <div className="bg-card hairline rounded-xl flex flex-col" style={{ maxHeight: "calc(100vh - 240px)" }}>
+      <div className="px-4 pt-4 pb-3 hairline-b">
+        <p className="text-[11px] uppercase tracking-wider" style={{ color: PURPLE, fontWeight: 500, letterSpacing: "0.5px" }}>
+          ✦ Confirm inventory
+        </p>
+        <p className="text-[14px] text-foreground font-medium mt-1 truncate">{filename}</p>
+        <p className="text-[12px] text-muted-foreground mt-0.5 truncate">{propertyAddress}</p>
+        <p className="text-[12px] text-muted-foreground mt-2" style={{ lineHeight: 1.5 }}>
+          Tick each item to confirm it's present and in working order, or flag an issue. The signed
+          checklist is filed alongside the inventory as evidence.
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-3" style={{ minHeight: 0 }}>
+        {INVENTORY_ROOMS.map((room) => (
+          <div key={room.room} className="mb-3">
+            <p
+              className="text-[11px] font-medium text-muted-foreground mb-1.5"
+              style={{ letterSpacing: "0.5px", textTransform: "uppercase" }}
+            >
+              {room.room}
+            </p>
+            <div className="bg-background hairline rounded-lg overflow-hidden">
+              {room.items.map((item, i) => {
+                const key = `${room.room}: ${item}`;
+                const s = state[key];
+                return (
+                  <div
+                    key={key}
+                    className={`flex items-center gap-2 px-2.5 py-1.5 ${i > 0 ? "hairline-t" : ""}`}
+                  >
+                    <span className="flex-1 text-[12px] text-foreground truncate">{item}</span>
+                    <button
+                      onClick={() => setState((p) => ({ ...p, [key]: p[key] === "ok" ? null : "ok" }))}
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] transition-colors"
+                      style={{
+                        backgroundColor: s === "ok" ? "#1F5A3A" : "transparent",
+                        color: s === "ok" ? "white" : "hsl(var(--muted-foreground))",
+                        border: s === "ok" ? "none" : "0.5px solid hsl(var(--border))",
+                      }}
+                    >
+                      <Check className="w-3 h-3" /> OK
+                    </button>
+                    <button
+                      onClick={() => setState((p) => ({ ...p, [key]: p[key] === "issue" ? null : "issue" }))}
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] transition-colors"
+                      style={{
+                        backgroundColor: s === "issue" ? "#FFFAEE" : "transparent",
+                        color: s === "issue" ? "#854F0B" : "hsl(var(--muted-foreground))",
+                        border: s === "issue" ? "0.5px solid #E5C870" : "0.5px solid hsl(var(--border))",
+                        fontWeight: s === "issue" ? 500 : 400,
+                      }}
+                    >
+                      <AlertTriangle className="w-3 h-3" /> Issue
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hairline-t px-4 py-3 flex items-center gap-2">
+        <div className="flex-1 text-[11px] text-muted-foreground">
+          {counts.ok} ok · {counts.issue} flagged · {counts.total - counts.ok - counts.issue} to review
+        </div>
+        <button
+          onClick={onCancel}
+          className="px-2.5 py-1.5 rounded-lg text-[12px] hover:bg-secondary text-muted-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={setAllOk}
+          className="px-2.5 py-1.5 rounded-lg text-[12px] hover:bg-secondary text-muted-foreground"
+          style={{ border: "0.5px solid hsl(var(--border))" }}
+        >
+          Mark all OK
+        </button>
+        <button
+          onClick={handleConfirm}
+          disabled={!allReviewed}
+          className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-white disabled:opacity-40"
+          style={{ backgroundColor: PURPLE }}
+        >
+          Confirm & file
+        </button>
+      </div>
+    </div>
   );
 }
 

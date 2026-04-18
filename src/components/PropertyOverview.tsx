@@ -276,6 +276,7 @@ export function PropertyOverview({
           completed={completed}
           allVaults={allVaults}
           taskUploads={taskUploads}
+          extractedFacts={extractedFacts}
           onUploadDoc={onUploadDoc}
           onMarkTaskDone={onMarkTaskDone}
           onUnmarkTaskDone={onUnmarkTaskDone}
