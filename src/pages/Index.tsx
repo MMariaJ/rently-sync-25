@@ -39,11 +39,14 @@ export default function Index() {
           taskUploads={store.taskUploads}
           extractedFacts={store.extractedFacts}
           events={store.events}
+          reviews={store.reviews}
           onUploadDoc={store.uploadDoc}
           onUploadDocDirect={store.uploadDocDirect}
           onMarkTaskDone={store.markTaskDone}
           onUnmarkTaskDone={store.unmarkTaskDone}
           onSetReminder={store.setReminder}
+          onFileCommsAttachment={store.fileCommsAttachment}
+          onAddReview={store.addReview}
           onBack={() => setActiveProp(null)}
         />
       );

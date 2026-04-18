@@ -186,9 +186,9 @@ const DATA_BY_ID: Record<string, OverviewData> = {
 const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Reviews"];
 
 export function PropertyOverview({
-  property, completed, allVaults, taskUploads, extractedFacts, events,
+  property, completed, allVaults, taskUploads, extractedFacts, events, reviews,
   onUploadDoc, onUploadDocDirect, onMarkTaskDone, onUnmarkTaskDone, onSetReminder,
-  onBack,
+  onFileCommsAttachment, onAddReview, onBack,
 }: PropertyOverviewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("Overview");
   const data = DATA_BY_ID[property.id] ?? DATA_BY_ID.p2;
@@ -273,11 +273,11 @@ export function PropertyOverview({
           onUploadDocDirect={onUploadDocDirect}
         />
       ) : activeTab === "Comms" ? (
-        <CommsTab property={property} />
+        <CommsTab property={property} onFileCommsAttachment={onFileCommsAttachment} />
       ) : activeTab === "Payments" ? (
         <PaymentsTab property={property} />
       ) : activeTab === "Reviews" ? (
-        <ReviewsTab property={property} />
+        <ReviewsTab property={property} reviews={reviews} onAddReview={onAddReview} />
       ) : (
         <>
           {/* Hero action card */}
