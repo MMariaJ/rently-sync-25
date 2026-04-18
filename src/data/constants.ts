@@ -314,3 +314,81 @@ export const PROP_RATINGS: Record<string, { rating: number; count: number }> = {
   p2: { rating: 4.7, count: 5 },
   p3: { rating: 4.6, count: 6 },
 };
+
+// Six-month rent reliability sparkline. Most recent month last.
+// Each entry: month label, expected payments, paid-on-time count, and
+// (for the in-progress month) a 0-1 collected ratio.
+export const RELIABILITY_HISTORY: Record<string, Array<{
+  month: string;
+  expected: number;
+  paidOnTime: number;
+  collectedRatio?: number; // populated only for the current in-progress month
+  inProgress?: boolean;
+}>> = {
+  p1: [
+    { month: "Nov", expected: 1, paidOnTime: 1 },
+    { month: "Dec", expected: 1, paidOnTime: 1 },
+    { month: "Jan", expected: 1, paidOnTime: 1 },
+    { month: "Feb", expected: 1, paidOnTime: 1 },
+    { month: "Mar", expected: 1, paidOnTime: 1 },
+    { month: "Apr", expected: 1, paidOnTime: 1, inProgress: true, collectedRatio: 1 },
+  ],
+  p2: [
+    { month: "Nov", expected: 1, paidOnTime: 1 },
+    { month: "Dec", expected: 1, paidOnTime: 1 },
+    { month: "Jan", expected: 1, paidOnTime: 1 },
+    { month: "Feb", expected: 1, paidOnTime: 0 },
+    { month: "Mar", expected: 1, paidOnTime: 1 },
+    { month: "Apr", expected: 1, paidOnTime: 1, inProgress: true, collectedRatio: 1 },
+  ],
+  p3: [
+    { month: "Nov", expected: 2, paidOnTime: 2 },
+    { month: "Dec", expected: 2, paidOnTime: 2 },
+    { month: "Jan", expected: 3, paidOnTime: 3 },
+    { month: "Feb", expected: 3, paidOnTime: 3 },
+    { month: "Mar", expected: 3, paidOnTime: 3 },
+    { month: "Apr", expected: 3, paidOnTime: 2, inProgress: true, collectedRatio: 2 / 3 },
+  ],
+};
+
+// Landlord-paid utility bills (HMO p3). Split equally across occupied tenants.
+export const HMO_UTILITIES: Record<string, Array<{
+  id: string;
+  type: string;       // e.g. "Electricity", "Gas", "Water", "Broadband"
+  provider: string;
+  dueDate: string;
+  amount: number;
+  status: "paid" | "upcoming" | "overdue";
+}>> = {
+  p3: [
+    { id: "u1", type: "Electricity", provider: "Octopus Energy", dueDate: "12 Apr 2026", amount: 142, status: "paid" },
+    { id: "u2", type: "Gas",         provider: "Octopus Energy", dueDate: "12 Apr 2026", amount: 78,  status: "paid" },
+    { id: "u3", type: "Water",       provider: "Thames Water",   dueDate: "22 Apr 2026", amount: 54,  status: "upcoming" },
+    { id: "u4", type: "Broadband",   provider: "BT",             dueDate: "5 Apr 2026",  amount: 38,  status: "overdue" },
+  ],
+};
+
+// Past months for the Payment history list (most recent first).
+// Each entry stores the totals + a derived status sentence input (lateCount).
+export const PAYMENT_HISTORY_MONTHS: Record<string, Array<{
+  monthLabel: string;     // "March 2026"
+  rentTotal: number;
+  utilitiesTotal: number;
+  lateCount: number;      // 0 when fully on time
+}>> = {
+  p1: [
+    { monthLabel: "March 2026",    rentTotal: 1450, utilitiesTotal: 0, lateCount: 0 },
+    { monthLabel: "February 2026", rentTotal: 1450, utilitiesTotal: 0, lateCount: 0 },
+    { monthLabel: "January 2026",  rentTotal: 1450, utilitiesTotal: 0, lateCount: 0 },
+  ],
+  p2: [
+    { monthLabel: "March 2026",    rentTotal: 1800, utilitiesTotal: 0, lateCount: 0 },
+    { monthLabel: "February 2026", rentTotal: 1800, utilitiesTotal: 0, lateCount: 1 },
+    { monthLabel: "January 2026",  rentTotal: 1800, utilitiesTotal: 0, lateCount: 0 },
+  ],
+  p3: [
+    { monthLabel: "March 2026",    rentTotal: 1870, utilitiesTotal: 312, lateCount: 0 },
+    { monthLabel: "February 2026", rentTotal: 1250, utilitiesTotal: 298, lateCount: 0 },
+    { monthLabel: "January 2026",  rentTotal: 650,  utilitiesTotal: 286, lateCount: 0 },
+  ],
+};
