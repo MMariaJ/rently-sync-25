@@ -5,8 +5,8 @@ import {
   CreditCard, Star, User, AlertTriangle, ChevronRight, ChevronLeft, Check,
   FileText, Clock, Shield, Flame, Zap, FileWarning, Scale, CalendarClock,
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ComplianceDonut } from "./ComplianceDonut";
+import { DeadlineCalendar } from "./DeadlineCalendar";
 import { StarRating } from "./StarRating";
 import { TasksTab } from "./TasksTab";
 import { VaultTab } from "./VaultTab";
