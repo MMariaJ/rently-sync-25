@@ -39,9 +39,10 @@ export interface TenantPropertyViewProps {
   onFileCommsAttachment: AppActions["fileCommsAttachment"];
   onAddReview: AppActions["addReview"];
   onBack: () => void;
+  initialTab?: TabKey;
 }
 
-type TabKey = "Overview" | "Tasks" | "Vault" | "Comms" | "Payments" | "Reviews";
+export type TabKey = "Overview" | "Tasks" | "Vault" | "Comms" | "Payments" | "Reviews";
 const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Reviews"];
 
 const PURPLE = "#534AB7";
@@ -52,9 +53,9 @@ const RED_MID = "#A32D2D";
 export function TenantPropertyView({
   property, completed, allVaults, extractedFacts, events, reviews,
   onUploadDocDirect, onMarkTaskDone, onUnmarkTaskDone, onSetReminder,
-  onFileCommsAttachment, onAddReview, onBack,
+  onFileCommsAttachment, onAddReview, onBack, initialTab,
 }: TenantPropertyViewProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>("Overview");
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? "Overview");
   const name = property.address.split(",")[0];
   const tenantInfo = TENANT_INFO[property.id];
   const contract = PROP_CONTRACT[property.id];

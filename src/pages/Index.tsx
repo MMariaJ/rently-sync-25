@@ -39,7 +39,18 @@ export default function Index() {
   const renderContent = () => {
     // ---------- TENANT ----------
     if (!isLL) {
-      if (activeProp) {
+      // Map sidebar tabs into the tenant's single property.
+      // home  → TenantHome dashboard
+      // alerts → property Tasks tab (the tenant's actionable alerts)
+      // reviews → property Reviews tab
+      // settings → placeholder
+      const sidebarToPropertyTab: Record<string, "Tasks" | "Reviews" | null> = {
+        alerts: "Tasks",
+        reviews: "Reviews",
+      };
+      const deepLinkTab = sidebarToPropertyTab[sidebarTab] ?? null;
+
+      if (activeProp || deepLinkTab) {
         return (
           <TenantPropertyView
             property={tenantProperty}
@@ -55,7 +66,8 @@ export default function Index() {
             onSetReminder={store.setReminder}
             onFileCommsAttachment={store.fileCommsAttachment}
             onAddReview={store.addReview}
-            onBack={() => setActiveProp(null)}
+            onBack={() => { setActiveProp(null); setSidebarTab("home"); }}
+            initialTab={deepLinkTab ?? undefined}
           />
         );
       }
@@ -71,7 +83,7 @@ export default function Index() {
         );
       }
 
-      // Other tenant tabs (alerts, reviews, settings) — placeholder for now.
+      // settings → placeholder
       return (
         <div className="bg-card hairline rounded-xl p-12 text-center">
           <p className="text-muted-foreground text-[13px]">
