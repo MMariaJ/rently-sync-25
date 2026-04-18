@@ -3,7 +3,7 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { LandlordHome } from "@/components/LandlordHome";
-import { PropertyDetail } from "@/components/PropertyDetail";
+import { PropertyOverview } from "@/components/PropertyOverview";
 import {
   PORTFOLIO, VAULT_INIT, COMPLETED_INIT,
   type Property, type VaultDoc,
@@ -55,10 +55,8 @@ export default function Index() {
   const renderContent = () => {
     if (isLL && activeProp && prop) {
       return (
-        <PropertyDetail
+        <PropertyOverview
           property={prop}
-          completed={completed}
-          allVaults={allVaults}
           onBack={() => setActiveProp(null)}
         />
       );
