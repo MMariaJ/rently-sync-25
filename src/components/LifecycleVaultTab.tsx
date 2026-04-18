@@ -204,6 +204,12 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
             />
           </div>
           <button
+            onClick={() => {
+              const next = toCollect[0]?.name;
+              if (next && onUploadDocDirect) {
+                onUploadDocDirect(property.id, next);
+              }
+            }}
             className="text-foreground"
             style={{
               padding: "6px 12px",
@@ -211,7 +217,11 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
               backgroundColor: "hsl(var(--card))",
               border: "0.5px solid hsl(var(--muted-foreground) / 0.3)",
               borderRadius: "8px",
+              cursor: toCollect.length > 0 ? "pointer" : "not-allowed",
+              opacity: toCollect.length > 0 ? 1 : 0.5,
             }}
+            disabled={toCollect.length === 0}
+            title={toCollect[0]?.name ? `Upload ${toCollect[0]?.name}` : "Nothing to upload"}
           >
             + Upload
           </button>
@@ -288,7 +298,7 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
                     style={{ paddingTop: "10px", borderTop: `0.5px solid ${RED_DIVIDER}` }}
                   >
                     <p className="text-muted-foreground min-w-0" style={{ fontSize: "12px" }}>
-                      {extractedSummary(doc.name, v)}
+                      {extractedFacts?.[`${property.id}::${doc.name}`]?.summary ?? extractedSummary(doc.name, v)}
                     </p>
                     <div className="flex items-center shrink-0" style={{ gap: "8px" }}>
                       <button
@@ -304,6 +314,7 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
                         View
                       </button>
                       <button
+                        onClick={() => onUploadDocDirect?.(property.id, doc.name)}
                         className="font-medium text-white"
                         style={{
                           padding: "6px 12px",
@@ -311,6 +322,7 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
                           backgroundColor: PURPLE,
                           border: "none",
                           borderRadius: "8px",
+                          cursor: "pointer",
                         }}
                       >
                         Renew →
