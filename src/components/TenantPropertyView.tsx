@@ -83,7 +83,7 @@ export function TenantPropertyView({
           <span>{property.postcode}</span>
           {propRating && (
             <span className="tabular-nums">
-              {propRating.rating.toFixed(1)} ★ · {propRating.reviewCount} reviews
+              {propRating.rating.toFixed(1)} ★ · {propRating.count} reviews
             </span>
           )}
           <span className="tabular-nums">£{property.rent.toLocaleString()}/mo</span>
