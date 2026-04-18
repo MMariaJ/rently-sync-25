@@ -26,6 +26,11 @@ interface LifecycleTasksTabProps {
   property: Property;
   completed: Record<string, boolean>;
   allVaults: Record<string, VaultDoc[]>;
+  taskUploads: Record<string, string>;
+  onUploadDoc: (args: { propId: string; taskId: string; vaultDoc: string; filename?: string }) => void;
+  onMarkTaskDone: (propId: string, taskId: string, taskTitle: string) => void;
+  onUnmarkTaskDone: (propId: string, taskId: string) => void;
+  onSetReminder: (propId: string, taskId: string, fireInDays?: number) => void;
 }
 
 interface ResolvedTask {
@@ -88,12 +93,11 @@ function buildCtx(p: Property): TaskCtx {
   };
 }
 
-export function LifecycleTasksTab({ property, completed }: LifecycleTasksTabProps) {
+export function LifecycleTasksTab({
+  property, completed, taskUploads,
+  onUploadDoc, onMarkTaskDone, onUnmarkTaskDone, onSetReminder,
+}: LifecycleTasksTabProps) {
   const ctx = useMemo(() => buildCtx(property), [property]);
-
-  // Local state — overrides the prop `completed` for in-session toggles
-  const [localDone, setLocalDone] = useState<Record<string, boolean>>({});
-  const [uploaded, setUploaded] = useState<Record<string, string>>({}); // taskId -> filename
 
   const taskIds = tasksForProperty(property);
 
@@ -106,18 +110,17 @@ export function LifecycleTasksTab({ property, completed }: LifecycleTasksTabProp
       }
       const days = lib.daysRemaining(ctx);
       const isCompleted = completed[`${property.id}_${id}`] ?? false;
-      const isLocallyDone = localDone[id] ?? false;
-      const hasUpload = !!uploaded[id];
+      const hasUpload = !!taskUploads[`${property.id}_${id}`];
       return {
         id,
         title: titleFor(id),
         category: lib.category,
         daysRemaining: days,
-        done: isCompleted || isLocallyDone || hasUpload,
+        done: isCompleted || hasUpload,
         hasDoc: lib.actions.some((a) => a.kind === "upload"),
       };
     });
-  }, [taskIds, ctx, completed, localDone, uploaded, property.id]);
+  }, [taskIds, ctx, completed, taskUploads, property.id]);
 
   // Most urgent: smallest positive days, or any overdue
   const mostUrgent = useMemo(() => {
@@ -157,30 +160,29 @@ export function LifecycleTasksTab({ property, completed }: LifecycleTasksTabProp
   // --- handlers ------------------------------------------------------------
 
   const toggleDone = (id: string) => {
-    setLocalDone((prev) => ({ ...prev, [id]: !prev[id] }));
-    const wasDone = localDone[id];
-    toast(wasDone ? "Marked as not done" : "Marked complete", {
-      description: titleFor(id),
-    });
+    const wasDone = completed[`${property.id}_${id}`] || !!taskUploads[`${property.id}_${id}`];
+    if (wasDone) {
+      onUnmarkTaskDone(property.id, id);
+      toast("Marked as not done", { description: titleFor(id) });
+    } else {
+      onMarkTaskDone(property.id, id, titleFor(id));
+    }
   };
 
   const handleAction = (taskId: string, action: TaskAction) => {
     if (action.kind === "upload") {
-      // Stub — pretend to open a file picker
-      const filename = `${taskId}-${Date.now()}.pdf`;
-      setUploaded((prev) => ({ ...prev, [taskId]: filename }));
-      toast.success("Uploaded", {
-        description: `${action.vaultDoc} attached.`,
+      const filename = `${action.vaultDoc.replace(/\s+/g, "_")}_${property.id}.pdf`;
+      onUploadDoc({ propId: property.id, taskId, vaultDoc: action.vaultDoc, filename });
+      toast.success("Uploaded · filed in Vault", {
+        description: `${action.vaultDoc} · ✦ key facts extracted.`,
       });
     } else if (action.kind === "remind") {
-      toast("Reminder set", {
-        description: "We'll nudge you 7 days before the deadline.",
-      });
+      onSetReminder(property.id, taskId, 7);
+      toast("Reminder set", { description: "We'll nudge you 7 days before the deadline." });
     } else if (action.kind === "external") {
       toast("Opening external link", { description: action.href });
     } else if (action.kind === "mark-done") {
-      setLocalDone((prev) => ({ ...prev, [taskId]: true }));
-      toast.success("Marked complete", { description: titleFor(taskId) });
+      onMarkTaskDone(property.id, taskId, titleFor(taskId));
     }
   };
 
@@ -271,7 +273,7 @@ export function LifecycleTasksTab({ property, completed }: LifecycleTasksTabProp
             <TaskDetailPanel
               taskId={effectiveSelected}
               ctx={ctx}
-              uploaded={uploaded[effectiveSelected]}
+              uploaded={taskUploads[`${property.id}_${effectiveSelected}`]}
               done={resolved.find((t) => t.id === effectiveSelected)?.done ?? false}
               onAction={(a) => handleAction(effectiveSelected, a)}
             />
