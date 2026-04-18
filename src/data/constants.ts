@@ -17,8 +17,15 @@ export interface Property {
   verified: boolean;
   contractUploaded: boolean;
   isHmo?: boolean;
-  // For HMO: who is responsible for utility bills
+  // Who is responsible for utility bills (HMO + single-let). Defaults to "tenants-pay".
   utilityMode?: "landlord-pays" | "tenants-pay";
+  // Single-let payment fields (HMO uses HMO_TENANTS instead)
+  paymentStatus?: "paid" | "upcoming" | "late";
+  paymentRef?: string;
+  paidDate?: string;
+  dueDate?: string;
+  daysLate?: number;
+  reliability?: { onTime: number; total: number };
 }
 
 export interface TenantInfo {
