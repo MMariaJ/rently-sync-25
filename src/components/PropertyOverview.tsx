@@ -8,22 +8,35 @@ interface PropertyOverviewProps {
 
 type TabKey = "Overview" | "Tasks" | "Vault" | "Comms" | "Payments" | "Reviews";
 
+interface HmoTenant {
+  initials: string;
+  name: string;
+  rent: number;
+  since: string;
+  status: "Paid" | "Due soon" | "Late";
+  avatarBg: string;
+  avatarFg: string;
+}
+
 interface OverviewData {
   postcode: string;
   rating: number;
   reviewCount: number;
   rent: number;
+  isHmo?: boolean;
   hero: {
     headline: string;
     subline: string;
     cta: string;
+    tone?: "danger" | "neutral";
   };
-  tenant: {
+  tenant?: {
     initials: string;
     name: string;
     rating: number;
     since: string;
   };
+  hmoTenants?: HmoTenant[];
   activity: { title: string; date: string }[];
   upcoming: {
     label: string;
