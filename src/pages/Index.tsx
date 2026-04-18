@@ -98,7 +98,7 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ backgroundColor: "hsl(240 6% 98%)" }}>
       <AppSidebar
         activeTab={sidebarTab}
         onTabChange={(tab) => {
