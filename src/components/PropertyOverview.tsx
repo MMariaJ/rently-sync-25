@@ -195,7 +195,7 @@ export function PropertyOverview({
   const currentPhase: LifecyclePhase = getLifecyclePhase(property, completed, allVaults);
   const phaseProgress = getPhaseProgress(property, completed, allVaults);
   const liveEvents = events.filter(e => e.propId === property.id);
-  void currentPhase; void phaseProgress; void extractedFacts; void onMarkTaskDone; void onUnmarkTaskDone; void taskUploads; void onUploadDoc; void onSetReminder; void onUploadDocDirect;
+  
 
   // Soft red palette for hero
   const RED_BG = "#FBECEC";
