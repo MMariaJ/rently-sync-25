@@ -123,6 +123,41 @@ const DATA_BY_ID: Record<string, OverviewData> = {
       },
     ],
   },
+  p3: {
+    postcode: "Hackney E8 1QP",
+    rating: 4.5,
+    reviewCount: 6,
+    rent: 1870,
+    isHmo: true,
+    hero: {
+      headline: "AST renewal window opens in 95 days",
+      subline: "Three tenants, three contracts. We'll surface each one as their renewal approaches.",
+      cta: "Plan renewals",
+      tone: "neutral",
+    },
+    hmoTenants: [
+      { initials: "MC", name: "Mia Chen", rent: 650, since: "Jan 2026", status: "Paid",     avatarBg: "#E1ECF7", avatarFg: "#2E5A8C" },
+      { initials: "KA", name: "Kwame Asante", rent: 620, since: "Feb 2026", status: "Paid", avatarBg: "#EAF3DE", avatarFg: "#3B6D11" },
+      { initials: "SR", name: "Sofia Rossi",  rent: 600, since: "Mar 2026", status: "Due soon", avatarBg: "#F7E8DD", avatarFg: "#8C4A1F" },
+    ],
+    activity: [
+      { title: "Rent paid · £650 (Mia)", date: "1 Apr" },
+      { title: "Rent paid · £620 (Kwame)", date: "1 Apr" },
+      { title: "Message from Sofia · \u201CWhen is the boiler service?\u201D", date: "29 Mar" },
+      { title: "HMO licence inspection passed", date: "22 Mar" },
+      { title: "Sofia Rossi moved in", date: "1 Mar" },
+    ],
+    upcoming: [
+      {
+        label: "This year",
+        items: [
+          { title: "AST renewal — Mia Chen", sub: "Lease ends 31 Dec 2026", right: "95 days" },
+          { title: "Deposit Protection — Kwame", sub: "Re-protection window", right: "130 days" },
+          { title: "Gas Safety Certificate", sub: "Annual inspection", right: "248 days" },
+        ],
+      },
+    ],
+  },
 };
 
 const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Reviews"];
