@@ -1,8 +1,15 @@
 import { useState } from "react";
-import type { Property } from "@/data/constants";
+import type { Property, VaultDoc } from "@/data/constants";
+import { TasksTab } from "./TasksTab";
+import { VaultTab } from "./VaultTab";
+import { CommsTab } from "./CommsTab";
+import { PaymentsTab } from "./PaymentsTab";
+import { ReviewsTab } from "./ReviewsTab";
 
 interface PropertyOverviewProps {
   property: Property;
+  completed: Record<string, boolean>;
+  allVaults: Record<string, VaultDoc[]>;
   onBack: () => void;
 }
 
