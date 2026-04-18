@@ -12,6 +12,7 @@ import {
 import {
   TASK_LIBRARY, type TaskCtx, type TaskCategory, type TaskAction,
 } from "@/data/taskLibrary";
+import { InventoryChecklistModal } from "./InventoryChecklistModal";
 
 const PURPLE = "#534AB7";
 const PURPLE_TINT = "#F7F5FD";
@@ -169,9 +170,16 @@ export function LifecycleTasksTab({
     }
   };
 
+  const [pendingInventory, setPendingInventory] = useState<{ taskId: string; filename: string } | null>(null);
+
   const handleAction = (taskId: string, action: TaskAction) => {
     if (action.kind === "upload") {
       const filename = `${action.vaultDoc.replace(/\s+/g, "_")}_${property.id}.pdf`;
+      // Inventory uploads must be confirmed item-by-item before filing.
+      if (action.vaultDoc === "Move-In Inventory") {
+        setPendingInventory({ taskId, filename });
+        return;
+      }
       onUploadDoc({ propId: property.id, taskId, vaultDoc: action.vaultDoc, filename });
       toast.success("Uploaded · filed in Vault", {
         description: `${action.vaultDoc} · ✦ key facts extracted.`,
