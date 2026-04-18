@@ -34,6 +34,8 @@ const Sparkle = () => <span style={{ color: PURPLE }}>✦</span>;
 interface LifecycleVaultTabProps {
   property: Property;
   allVaults: Record<string, VaultDoc[]>;
+  extractedFacts?: Record<string, import("@/state/engines").ExtractedFacts>;
+  onUploadDocDirect?: (propId: string, vaultDoc: string, filename?: string) => void;
 }
 
 // Documents the AI extracts from (these get the ✦ sparkle)
