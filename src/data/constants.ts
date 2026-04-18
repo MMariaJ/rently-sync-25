@@ -81,8 +81,8 @@ export interface TaskItem {
 }
 
 export const PORTFOLIO: Property[] = [
-  { id: "p1", address: "14 Elmwood Road, London SE4 2BN", postcode: "London SE4 2BN", tenant: "Sarah Mitchell", rent: 1450, status: "active", compliance: 0, nextDeadline: "Gas cert renewal — 14 Jun 2026", depositRef: "MD2024-88421", depositScheme: "MyDeposits", depositAmount: 2175, verified: true, contractUploaded: true },
-  { id: "p2", address: "7 Crane Wharf, Greenwich SE10 0LN", postcode: "Greenwich SE10 0LN", tenant: "James Okafor", rent: 1800, status: "active", compliance: 0, nextDeadline: "EPC renewal overdue", depositRef: "DPS2025-11043", depositScheme: "DPS", depositAmount: 2700, verified: true, contractUploaded: true },
+  { id: "p1", address: "14 Elmwood Road, London SE4 2BN", postcode: "London SE4 2BN", tenant: "Sarah Mitchell", rent: 1450, status: "active", compliance: 0, nextDeadline: "Gas cert renewal — 14 Jun 2026", depositRef: "MD2024-88421", depositScheme: "MyDeposits", depositAmount: 2175, verified: true, contractUploaded: true, utilityMode: "tenants-pay", paymentStatus: "paid", paymentRef: "OB-SM-04101", paidDate: "1 Apr 2026", dueDate: "1 Apr 2026", reliability: { onTime: 2, total: 2 } },
+  { id: "p2", address: "7 Crane Wharf, Greenwich SE10 0LN", postcode: "Greenwich SE10 0LN", tenant: "James Okafor", rent: 1800, status: "active", compliance: 0, nextDeadline: "EPC renewal overdue", depositRef: "DPS2025-11043", depositScheme: "DPS", depositAmount: 2700, verified: true, contractUploaded: true, utilityMode: "tenants-pay", paymentStatus: "upcoming", paymentRef: "OB-JO-04207", dueDate: "5 Apr 2026", reliability: { onTime: 11, total: 12 } },
   { id: "p3", address: "3 Saffron Court, Hackney E8 1QP", postcode: "Hackney E8 1QP", tenant: "3 tenants", rent: 1870, status: "active", compliance: 0, nextDeadline: "No actions due", depositRef: null, depositScheme: null, verified: true, contractUploaded: true, isHmo: true, utilityMode: "landlord-pays" },
 ];
 
