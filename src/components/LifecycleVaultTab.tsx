@@ -138,7 +138,7 @@ function filedSubtitle(docName: string, validity: DocValidity | undefined, doc: 
   return "On file";
 }
 
-export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProps) {
+export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploadDocDirect }: LifecycleVaultTabProps) {
   const vault = allVaults[property.id] ?? VAULT_INIT;
   const validity = DOC_VALIDITY_BY_PROP[property.id] ?? {};
   const isHmo = !!property.isHmo;
