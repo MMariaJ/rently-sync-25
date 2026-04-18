@@ -292,6 +292,28 @@ export function LifecycleTasksTab({
           )}
         </section>
       </div>
+
+      {pendingInventory && (
+        <InventoryChecklistModal
+          propertyAddress={property.address}
+          filename={pendingInventory.filename}
+          onClose={() => setPendingInventory(null)}
+          onConfirm={({ confirmed, total, issues }) => {
+            const { taskId, filename } = pendingInventory;
+            onUploadDoc({ propId: property.id, taskId, vaultDoc: "Move-In Inventory", filename });
+            setPendingInventory(null);
+            if (issues.length > 0) {
+              toast.warning(`Filed with ${issues.length} flagged ${issues.length === 1 ? "item" : "items"}`, {
+                description: `${confirmed}/${total} confirmed · issues logged to evidence trail.`,
+              });
+            } else {
+              toast.success("Inventory confirmed & filed", {
+                description: `${confirmed}/${total} items confirmed · ✦ extracted to Vault.`,
+              });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
