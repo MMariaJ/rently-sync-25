@@ -1,17 +1,13 @@
 import { cn } from "@/lib/utils";
-import { useState } from "react";
-import { Check, Hash } from "lucide-react";
 import {
-  PAYMENTS_BY_PROP, RECURRING_PAYMENTS,
   HMO_TENANTS, HMO_UTILITIES, RELIABILITY_HISTORY, PAYMENT_HISTORY_MONTHS,
+  TENANT_INFO,
   type Property,
 } from "@/data/constants";
 
 interface PaymentsTabProps {
   property: Property;
 }
-
-const DEPOSIT_STAGES = ["Received", "Protected", "Active", "Release agreed", "Returned"];
 
 // Shared palette — reused from the rest of the app.
 const PURPLE = "#534AB7";
@@ -26,16 +22,71 @@ const SPARK = (
   <span style={{ color: PURPLE, fontWeight: 500 }} aria-hidden="true">✦</span>
 );
 
+// Unified tenant row shape, whether the property is HMO or single-let.
+interface PaymentTenant {
+  id: string;
+  name: string;
+  room?: string;
+  rent: number;
+  deposit: number;
+  depositScheme: string;
+  depositRef: string;
+  paymentStatus: "paid" | "upcoming" | "late";
+  paymentRef: string;
+  paidDate?: string;
+  dueDate: string;
+  daysLate?: number;
+  reliability: { onTime: number; total: number };
+}
+
+function tenantsForProperty(p: Property): PaymentTenant[] {
+  if (p.isHmo) {
+    return (HMO_TENANTS[p.id] ?? []).map((t) => ({
+      id: t.id,
+      name: t.name,
+      room: t.room,
+      rent: t.rent,
+      deposit: t.deposit,
+      depositScheme: t.depositScheme,
+      depositRef: t.depositRef,
+      paymentStatus: t.paymentStatus,
+      paymentRef: t.paymentRef,
+      paidDate: t.paidDate,
+      dueDate: t.dueDate,
+      daysLate: t.daysLate,
+      reliability: t.reliability,
+    }));
+  }
+  // Single-let: synthesise a one-row list from Property + TenantInfo.
+  const info = TENANT_INFO[p.id];
+  return [
+    {
+      id: `${p.id}-tenant`,
+      name: info?.name ?? p.tenant,
+      rent: p.rent,
+      deposit: p.depositAmount ?? 0,
+      depositScheme: p.depositScheme ?? "—",
+      depositRef: p.depositRef ?? "—",
+      paymentStatus: p.paymentStatus ?? "upcoming",
+      paymentRef: p.paymentRef ?? "—",
+      paidDate: p.paidDate,
+      dueDate: p.dueDate ?? "—",
+      daysLate: p.daysLate,
+      reliability: p.reliability ?? { onTime: 0, total: 0 },
+    },
+  ];
+}
+
 export function PaymentsTab({ property: p }: PaymentsTabProps) {
-  if (p.isHmo) return <HmoPaymentsView property={p} />;
-  return <SingleLetPaymentsView property={p} />;
+  return <PaymentsView property={p} />;
 }
 
 // =============================================================
-// HMO view — the new design from the spec.
+// Unified Payments view — same skeleton for HMO and single-let.
+// Single-let renders a one-row tenant list and skips utilities by default.
 // =============================================================
-function HmoPaymentsView({ property: p }: { property: Property }) {
-  const tenants = HMO_TENANTS[p.id] ?? [];
+function PaymentsView({ property: p }: { property: Property }) {
+  const tenants = tenantsForProperty(p);
   const utilities = HMO_UTILITIES[p.id] ?? [];
   const history = PAYMENT_HISTORY_MONTHS[p.id] ?? [];
   const reliability = RELIABILITY_HISTORY[p.id] ?? [];
