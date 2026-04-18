@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { ComplianceDonut } from "./ComplianceDonut";
 import { DeadlineCalendar, type DeadlineDate } from "./DeadlineCalendar";
+import { HeroHealthyCard } from "./HeroHealthyCard";
 import {
   TENANT_INFO, HMO_TENANTS, VAULT_INIT,
   LANDLORD_PROFILE, DOC_VALIDITY_BY_PROP,
