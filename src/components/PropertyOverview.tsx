@@ -1,16 +1,26 @@
 import { useState } from "react";
 import type { Property, VaultDoc } from "@/data/constants";
-import { TasksTab } from "./TasksTab";
 import { LifecycleTasksTab } from "./LifecycleTasksTab";
 import { LifecycleVaultTab } from "./LifecycleVaultTab";
 import { CommsTab } from "./CommsTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { ReviewsTab } from "./ReviewsTab";
+import type { ActivityEvent, AppActions } from "@/state/useAppStore";
+import type { ExtractedFacts, LifecyclePhase } from "@/state/engines";
+import { getLifecyclePhase, getPhaseProgress } from "@/state/engines";
 
-interface PropertyOverviewProps {
+export interface PropertyOverviewProps {
   property: Property;
   completed: Record<string, boolean>;
   allVaults: Record<string, VaultDoc[]>;
+  taskUploads: Record<string, string>;
+  extractedFacts: Record<string, ExtractedFacts>;
+  events: ActivityEvent[];
+  onUploadDoc: AppActions["uploadDoc"];
+  onUploadDocDirect: AppActions["uploadDocDirect"];
+  onMarkTaskDone: AppActions["markTaskDone"];
+  onUnmarkTaskDone: AppActions["unmarkTaskDone"];
+  onSetReminder: AppActions["setReminder"];
   onBack: () => void;
 }
 
@@ -172,10 +182,20 @@ const DATA_BY_ID: Record<string, OverviewData> = {
 
 const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Reviews"];
 
-export function PropertyOverview({ property, completed, allVaults, onBack }: PropertyOverviewProps) {
+export function PropertyOverview({
+  property, completed, allVaults, taskUploads, extractedFacts, events,
+  onUploadDoc, onUploadDocDirect, onMarkTaskDone, onUnmarkTaskDone, onSetReminder,
+  onBack,
+}: PropertyOverviewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("Overview");
   const data = DATA_BY_ID[property.id] ?? DATA_BY_ID.p2;
   const name = property.address.split(",")[0];
+
+  // Live derived state from the store
+  const currentPhase: LifecyclePhase = getLifecyclePhase(property, completed, allVaults);
+  const phaseProgress = getPhaseProgress(property, completed, allVaults);
+  const liveEvents = events.filter(e => e.propId === property.id);
+  
 
   // Soft red palette for hero
   const RED_BG = "#FBECEC";
@@ -236,9 +256,19 @@ export function PropertyOverview({ property, completed, allVaults, onBack }: Pro
           property={property}
           completed={completed}
           allVaults={allVaults}
+          taskUploads={taskUploads}
+          onUploadDoc={onUploadDoc}
+          onMarkTaskDone={onMarkTaskDone}
+          onUnmarkTaskDone={onUnmarkTaskDone}
+          onSetReminder={onSetReminder}
         />
       ) : activeTab === "Vault" ? (
-        <LifecycleVaultTab property={property} allVaults={allVaults} />
+        <LifecycleVaultTab
+          property={property}
+          allVaults={allVaults}
+          extractedFacts={extractedFacts}
+          onUploadDocDirect={onUploadDocDirect}
+        />
       ) : activeTab === "Comms" ? (
         <CommsTab property={property} />
       ) : activeTab === "Payments" ? (
@@ -277,24 +307,28 @@ export function PropertyOverview({ property, completed, allVaults, onBack }: Pro
             );
           })()}
 
-          {/* Lifecycle tracker */}
+          {/* Lifecycle tracker — derived from real completion state */}
           {(() => {
-            const isHmo = !!data.isHmo;
-            const stages = isHmo
-              ? [
-                  { name: "Pre-move-in", count: "all done", active: false },
-                  { name: "Move-in", count: "all done", active: false },
-                  { name: "Active tenancy", count: "ongoing", active: true },
-                  { name: "Move-out", count: "no open tasks", active: false },
-                ]
-              : [
-                  { name: "Pre-move-in", count: "1 task open", active: true },
-                  { name: "Move-in", count: "no open tasks", active: false },
-                  { name: "Active tenancy", count: "ongoing", active: false },
-                  { name: "Move-out", count: "no open tasks", active: false },
-                ];
-            const summary = isHmo ? "All tenancies in active stage" : "1 open in 1 stage";
-            const nextUp = isHmo ? "Schedule annual gas safety inspection" : "Set initial meter readings";
+            const phaseLabels: Record<LifecyclePhase, string> = {
+              "Pre-Move-In": "Pre-move-in",
+              "Move-In": "Move-in",
+              "During Tenancy": "Active tenancy",
+              "Move-Out": "Move-out",
+            };
+            const phaseOrder: LifecyclePhase[] = ["Pre-Move-In", "Move-In", "During Tenancy", "Move-Out"];
+            const stages = phaseOrder.map(ph => {
+              const p = phaseProgress[ph];
+              const active = ph === currentPhase;
+              const count = p.open === 0
+                ? "all done"
+                : `${p.open} ${p.open === 1 ? "task" : "tasks"} open`;
+              return { name: phaseLabels[ph], count, active };
+            });
+            const totalOpen = phaseOrder.reduce((sum, ph) => sum + phaseProgress[ph].open, 0);
+            const summary = totalOpen === 0
+              ? "All caught up"
+              : `${totalOpen} open · ${phaseLabels[currentPhase]} stage`;
+            const nextUp = data.hero.headline;
             return (
               <div className="bg-card hairline rounded-xl" style={{ padding: "1.25rem" }}>
                 <div className="flex items-center justify-between mb-4">
@@ -525,7 +559,10 @@ export function PropertyOverview({ property, completed, allVaults, onBack }: Pro
                     >
                       Recent activity
                     </p>
-                    {data.activity.map((a, i) => (
+                    {[
+                      ...liveEvents.map(e => ({ title: e.title, date: e.date })),
+                      ...data.activity,
+                    ].slice(0, 6).map((a, i) => (
                       <div
                         key={i}
                         className="flex items-center justify-between gap-3 text-[13px]"

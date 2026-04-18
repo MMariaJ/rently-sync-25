@@ -34,6 +34,8 @@ const Sparkle = () => <span style={{ color: PURPLE }}>✦</span>;
 interface LifecycleVaultTabProps {
   property: Property;
   allVaults: Record<string, VaultDoc[]>;
+  extractedFacts?: Record<string, import("@/state/engines").ExtractedFacts>;
+  onUploadDocDirect?: (propId: string, vaultDoc: string, filename?: string) => void;
 }
 
 // Documents the AI extracts from (these get the ✦ sparkle)
@@ -136,7 +138,7 @@ function filedSubtitle(docName: string, validity: DocValidity | undefined, doc: 
   return "On file";
 }
 
-export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProps) {
+export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploadDocDirect }: LifecycleVaultTabProps) {
   const vault = allVaults[property.id] ?? VAULT_INIT;
   const validity = DOC_VALIDITY_BY_PROP[property.id] ?? {};
   const isHmo = !!property.isHmo;
@@ -202,6 +204,12 @@ export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProp
             />
           </div>
           <button
+            onClick={() => {
+              const next = toCollect[0]?.name;
+              if (next && onUploadDocDirect) {
+                onUploadDocDirect(property.id, next);
+              }
+            }}
             className="text-foreground"
             style={{
               padding: "6px 12px",
@@ -209,7 +217,11 @@ export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProp
               backgroundColor: "hsl(var(--card))",
               border: "0.5px solid hsl(var(--muted-foreground) / 0.3)",
               borderRadius: "8px",
+              cursor: toCollect.length > 0 ? "pointer" : "not-allowed",
+              opacity: toCollect.length > 0 ? 1 : 0.5,
             }}
+            disabled={toCollect.length === 0}
+            title={toCollect[0]?.name ? `Upload ${toCollect[0]?.name}` : "Nothing to upload"}
           >
             + Upload
           </button>
@@ -286,7 +298,7 @@ export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProp
                     style={{ paddingTop: "10px", borderTop: `0.5px solid ${RED_DIVIDER}` }}
                   >
                     <p className="text-muted-foreground min-w-0" style={{ fontSize: "12px" }}>
-                      {extractedSummary(doc.name, v)}
+                      {extractedFacts?.[`${property.id}::${doc.name}`]?.summary ?? extractedSummary(doc.name, v)}
                     </p>
                     <div className="flex items-center shrink-0" style={{ gap: "8px" }}>
                       <button
@@ -302,6 +314,7 @@ export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProp
                         View
                       </button>
                       <button
+                        onClick={() => onUploadDocDirect?.(property.id, doc.name)}
                         className="font-medium text-white"
                         style={{
                           padding: "6px 12px",
@@ -309,6 +322,7 @@ export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProp
                           backgroundColor: PURPLE,
                           border: "none",
                           borderRadius: "8px",
+                          cursor: "pointer",
                         }}
                       >
                         Renew →
@@ -349,7 +363,12 @@ export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProp
               const items = group.docs.filter((d) => toCollectNames.has(d));
               if (items.length === 0) return null;
               return (
-                <CollectGroup key={group.label} label={group.label} items={items} />
+                <CollectGroup
+                  key={group.label}
+                  label={group.label}
+                  items={items}
+                  onUpload={(name) => onUploadDocDirect?.(property.id, name)}
+                />
               );
             })}
           </div>
@@ -402,7 +421,7 @@ export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProp
                         marginTop: "1px",
                       }}
                     >
-                      {subtitle}
+                      {extractedFacts?.[`${property.id}::${doc.name}`]?.summary ?? subtitle}
                       {hasSparkle && <> <Sparkle /></>}
                     </p>
                   </div>
@@ -436,7 +455,7 @@ export function LifecycleVaultTab({ property, allVaults }: LifecycleVaultTabProp
   );
 }
 
-function CollectGroup({ label, items }: { label: string; items: string[] }) {
+function CollectGroup({ label, items, onUpload }: { label: string; items: string[]; onUpload?: (name: string) => void }) {
   return (
     <div className="[&:not(:first-child)]:hairline-t" style={{ marginTop: 0 }}>
       <p
@@ -459,9 +478,13 @@ function CollectGroup({ label, items }: { label: string; items: string[] }) {
           <span className="text-foreground" style={{ fontSize: "13px" }}>
             {DISPLAY_NAME[item] ?? item}
           </span>
-          <span className="text-muted-foreground" style={{ fontSize: "12px" }}>
-            Add via Tasks →
-          </span>
+          <button
+            onClick={() => onUpload?.(item)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            style={{ fontSize: "12px", background: "transparent", border: "none", cursor: "pointer" }}
+          >
+            Upload →
+          </button>
         </div>
       ))}
     </div>
