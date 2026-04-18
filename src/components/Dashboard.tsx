@@ -103,29 +103,10 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
         <Stat label="Alerts" value={criticalAlerts.length.toString()} tone={criticalAlerts.length > 0 ? "danger" : "default"} />
       </div>
 
-      {/* Split: Your properties + Deadlines */}
+      {/* Split: Your properties + What's coming up */}
       <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
         <YourPropertiesSection />
-
-        <section>
-          <h2
-            className="font-medium text-muted-foreground mb-2.5"
-            style={{
-              fontSize: "12px",
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-            }}
-          >
-            Portfolio deadlines
-          </h2>
-          <div className="bg-card hairline rounded-xl p-5">
-            {allDeadlines.length > 0 ? (
-              <DeadlineCalendar dates={allDeadlines} upcomingLimit={5} />
-            ) : (
-              <p className="text-[13px] text-muted-foreground">No upcoming deadlines.</p>
-            )}
-          </div>
-        </section>
+        <WhatsComingUpSection />
       </div>
     </div>
   );
