@@ -1,8 +1,15 @@
 import { useState } from "react";
-import type { Property } from "@/data/constants";
+import type { Property, VaultDoc } from "@/data/constants";
+import { TasksTab } from "./TasksTab";
+import { VaultTab } from "./VaultTab";
+import { CommsTab } from "./CommsTab";
+import { PaymentsTab } from "./PaymentsTab";
+import { ReviewsTab } from "./ReviewsTab";
 
 interface PropertyOverviewProps {
   property: Property;
+  completed: Record<string, boolean>;
+  allVaults: Record<string, VaultDoc[]>;
   onBack: () => void;
 }
 
@@ -164,7 +171,7 @@ const DATA_BY_ID: Record<string, OverviewData> = {
 
 const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Reviews"];
 
-export function PropertyOverview({ property, onBack }: PropertyOverviewProps) {
+export function PropertyOverview({ property, completed, allVaults, onBack }: PropertyOverviewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("Overview");
   const data = DATA_BY_ID[property.id] ?? DATA_BY_ID.p2;
   const name = property.address.split(",")[0];
@@ -223,10 +230,16 @@ export function PropertyOverview({ property, onBack }: PropertyOverviewProps) {
         })}
       </div>
 
-      {activeTab !== "Overview" ? (
-        <div className="bg-card hairline rounded-xl p-12 text-center">
-          <p className="text-muted-foreground text-[13px]">{activeTab} — coming in the next iteration</p>
-        </div>
+      {activeTab === "Tasks" ? (
+        <TasksTab property={property} completed={completed} allVaults={allVaults} />
+      ) : activeTab === "Vault" ? (
+        <VaultTab property={property} allVaults={allVaults} />
+      ) : activeTab === "Comms" ? (
+        <CommsTab property={property} />
+      ) : activeTab === "Payments" ? (
+        <PaymentsTab property={property} />
+      ) : activeTab === "Reviews" ? (
+        <ReviewsTab property={property} />
       ) : (
         <>
           {/* Hero action card */}
