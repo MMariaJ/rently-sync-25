@@ -239,7 +239,9 @@ export function PropertyOverview({ property, completed, allVaults, onBack }: Pro
           allVaults={allVaults}
         />
       ) : activeTab === "Vault" ? (
-        <VaultTab property={property} allVaults={allVaults} />
+        property.id === "p1"
+          ? <ElmwoodVaultTab />
+          : <VaultTab property={property} allVaults={allVaults} />
       ) : activeTab === "Comms" ? (
         <CommsTab property={property} />
       ) : activeTab === "Payments" ? (
