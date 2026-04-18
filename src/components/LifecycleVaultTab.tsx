@@ -363,7 +363,12 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
               const items = group.docs.filter((d) => toCollectNames.has(d));
               if (items.length === 0) return null;
               return (
-                <CollectGroup key={group.label} label={group.label} items={items} />
+                <CollectGroup
+                  key={group.label}
+                  label={group.label}
+                  items={items}
+                  onUpload={(name) => onUploadDocDirect?.(property.id, name)}
+                />
               );
             })}
           </div>
@@ -416,7 +421,7 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
                         marginTop: "1px",
                       }}
                     >
-                      {subtitle}
+                      {extractedFacts?.[`${property.id}::${doc.name}`]?.summary ?? subtitle}
                       {hasSparkle && <> <Sparkle /></>}
                     </p>
                   </div>
@@ -450,7 +455,7 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
   );
 }
 
-function CollectGroup({ label, items }: { label: string; items: string[] }) {
+function CollectGroup({ label, items, onUpload }: { label: string; items: string[]; onUpload?: (name: string) => void }) {
   return (
     <div className="[&:not(:first-child)]:hairline-t" style={{ marginTop: 0 }}>
       <p
@@ -473,9 +478,13 @@ function CollectGroup({ label, items }: { label: string; items: string[] }) {
           <span className="text-foreground" style={{ fontSize: "13px" }}>
             {DISPLAY_NAME[item] ?? item}
           </span>
-          <span className="text-muted-foreground" style={{ fontSize: "12px" }}>
-            Add via Tasks →
-          </span>
+          <button
+            onClick={() => onUpload?.(item)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            style={{ fontSize: "12px", background: "transparent", border: "none", cursor: "pointer" }}
+          >
+            Upload →
+          </button>
         </div>
       ))}
     </div>
