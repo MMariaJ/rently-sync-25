@@ -1,0 +1,434 @@
+import { useState } from "react";
+import type { Property } from "@/data/constants";
+
+interface PropertyOverviewProps {
+  property: Property;
+  onBack: () => void;
+}
+
+type TabKey = "Overview" | "Tasks" | "Vault" | "Comms" | "Payments" | "Reviews";
+
+interface OverviewData {
+  postcode: string;
+  rating: number;
+  reviewCount: number;
+  rent: number;
+  hero: {
+    headline: string;
+    subline: string;
+    cta: string;
+  };
+  tenant: {
+    initials: string;
+    name: string;
+    rating: number;
+    since: string;
+  };
+  activity: { title: string; date: string }[];
+  upcoming: {
+    label: string;
+    items: {
+      title: string;
+      sub: string;
+      right: string;
+      overdue?: boolean;
+    }[];
+  }[];
+}
+
+// Hardcoded per-property overview data. Currently spec'd for p2 (7 Crane Wharf).
+const DATA_BY_ID: Record<string, OverviewData> = {
+  p2: {
+    postcode: "Greenwich SE10 0LN",
+    rating: 4.7,
+    reviewCount: 5,
+    rent: 1800,
+    hero: {
+      headline: "EPC certificate expired 3 days ago",
+      subline: "This blocks James's move-in. Fines start at £5,000 · about 10 minutes to fix.",
+      cta: "Renew now",
+    },
+    tenant: {
+      initials: "JO",
+      name: "James Okafor",
+      rating: 4.7,
+      since: "March 2025",
+    },
+    activity: [
+      { title: "Rent paid · £1,800", date: "3 Apr" },
+      { title: "Gas safety inspection booked", date: "28 Mar" },
+      { title: "Message from James · \u201CIs parking included?\u201D", date: "25 Mar" },
+      { title: "Deposit protected · £2,700", date: "20 Mar" },
+      { title: "Tenancy agreement signed", date: "15 Mar" },
+    ],
+    upcoming: [
+      {
+        label: "Overdue",
+        items: [
+          { title: "EPC Certificate", sub: "Expired 3 days ago", right: "Overdue", overdue: true },
+        ],
+      },
+      {
+        label: "Later this year",
+        items: [
+          { title: "EICR Report", sub: "Electrical safety", right: "110 days" },
+          { title: "Annual rent review", sub: "AST renewal window opens", right: "280 days" },
+        ],
+      },
+    ],
+  },
+  p1: {
+    postcode: "London SE4 2BN",
+    rating: 4.9,
+    reviewCount: 3,
+    rent: 1450,
+    hero: {
+      headline: "All compliant — Gas safety renews in 81 days",
+      subline: "Nothing urgent. We'll remind you 30 days before the deadline.",
+      cta: "View tasks",
+    },
+    tenant: {
+      initials: "SM",
+      name: "Sarah Mitchell",
+      rating: 4.9,
+      since: "February 2026",
+    },
+    activity: [
+      { title: "Rent paid · £1,450", date: "1 Apr" },
+      { title: "Tenancy agreement signed", date: "1 Feb" },
+      { title: "Deposit protected · £2,175", date: "28 Jan" },
+      { title: "Move-in inventory completed", date: "1 Feb" },
+      { title: "Tenant verified", date: "20 Jan" },
+    ],
+    upcoming: [
+      {
+        label: "This year",
+        items: [
+          { title: "Gas Safety Certificate", sub: "Annual inspection", right: "81 days" },
+          { title: "EICR Report", sub: "Electrical safety", right: "210 days" },
+        ],
+      },
+    ],
+  },
+};
+
+const TABS: TabKey[] = ["Overview", "Tasks", "Vault", "Comms", "Payments", "Reviews"];
+
+export function PropertyOverview({ property, onBack }: PropertyOverviewProps) {
+  const [activeTab, setActiveTab] = useState<TabKey>("Overview");
+  const data = DATA_BY_ID[property.id] ?? DATA_BY_ID.p2;
+  const name = property.address.split(",")[0];
+
+  // Soft red palette for hero
+  const RED_BG = "#FBECEC";
+  const RED_DARK = "#791F1F";
+  const RED_MID = "#A32D2D";
+  const RED_ACCENT = "#E24B4A";
+  const PURPLE = "#534AB7";
+
+  return (
+    <div className="space-y-4 pb-12">
+      {/* Breadcrumb */}
+      <button
+        onClick={onBack}
+        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+        style={{ color: "hsl(var(--muted-foreground) / 0.7)" }}
+      >
+        ← All properties
+      </button>
+
+      {/* Header row */}
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+        <h1 className="text-[20px] font-medium text-foreground tracking-tight">{name}</h1>
+        <div className="flex items-center text-[13px] text-muted-foreground" style={{ gap: "16px" }}>
+          <span>{data.postcode}</span>
+          <span className="tabular-nums">{data.rating.toFixed(1)} ★ · {data.reviewCount} reviews</span>
+          <span className="tabular-nums">£{data.rent.toLocaleString()}/mo</span>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex items-center gap-5 hairline-b">
+        {TABS.map((t) => {
+          const active = t === activeTab;
+          return (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              className="relative pb-2.5 text-[13px] transition-colors"
+              style={{
+                color: active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                fontWeight: active ? 500 : 400,
+              }}
+            >
+              {t}
+              {active && (
+                <span
+                  className="absolute left-0 right-0 -bottom-px"
+                  style={{ height: "2px", backgroundColor: "hsl(var(--foreground))" }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab !== "Overview" ? (
+        <div className="bg-card hairline rounded-xl p-12 text-center">
+          <p className="text-muted-foreground text-[13px]">{activeTab} — coming in the next iteration</p>
+        </div>
+      ) : (
+        <>
+          {/* Hero action card */}
+          <div
+            className="rounded-xl flex items-center justify-between gap-4"
+            style={{ backgroundColor: RED_BG, padding: "1rem 1.25rem" }}
+          >
+            <div className="min-w-0">
+              <p className="text-[15px] font-medium" style={{ color: RED_DARK }}>
+                {data.hero.headline}
+              </p>
+              <p className="text-[13px] mt-1" style={{ color: RED_MID }}>
+                {data.hero.subline}
+              </p>
+            </div>
+            <button
+              className="shrink-0 text-[13px] font-medium text-white"
+              style={{
+                backgroundColor: RED_DARK,
+                borderRadius: "8px",
+                padding: "8px 16px",
+              }}
+            >
+              {data.hero.cta}
+            </button>
+          </div>
+
+          {/* Lifecycle tracker */}
+          <div className="bg-card hairline rounded-xl" style={{ padding: "1.25rem" }}>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[13px] text-muted-foreground">Your lifecycle tasks</span>
+              <span className="text-[12px] text-muted-foreground">1 open in 1 stage</span>
+            </div>
+
+            <div className="flex" style={{ gap: "8px" }}>
+              {[
+                { name: "Pre-move-in", count: "1 task open", active: true },
+                { name: "Move-in", count: "no open tasks", active: false },
+                { name: "Active tenancy", count: "ongoing", active: false },
+                { name: "Move-out", count: "no open tasks", active: false },
+              ].map((s) => (
+                <div key={s.name} className="flex-1 flex flex-col" style={{ gap: "6px" }}>
+                  <div
+                    style={{
+                      height: "4px",
+                      borderRadius: "2px",
+                      backgroundColor: s.active ? PURPLE : "hsl(var(--border))",
+                    }}
+                  />
+                  <span
+                    className="text-[12px]"
+                    style={{
+                      color: s.active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                      fontWeight: s.active ? 500 : 400,
+                    }}
+                  >
+                    {s.name}
+                  </span>
+                  <span
+                    className="text-[11px]"
+                    style={{
+                      color: s.active
+                        ? "hsl(var(--muted-foreground))"
+                        : "hsl(var(--muted-foreground) / 0.7)",
+                    }}
+                  >
+                    {s.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="hairline-t flex items-center justify-between gap-3"
+              style={{ marginTop: "14px", paddingTop: "14px" }}
+            >
+              <div className="min-w-0">
+                <p className="text-[12px] text-muted-foreground">Next up</p>
+                <p className="text-[14px] font-medium text-foreground mt-0.5">
+                  Set initial meter readings
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  className="text-[13px] text-foreground hairline rounded-lg"
+                  style={{ padding: "6px 14px" }}
+                >
+                  Mark done
+                </button>
+                <button
+                  className="text-[13px] text-muted-foreground hairline rounded-lg"
+                  style={{ padding: "6px 10px" }}
+                >
+                  See all tasks →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Two-column body */}
+          <div className="grid gap-4" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
+            {/* Tenant column */}
+            <section>
+              <h2
+                className="font-medium text-muted-foreground"
+                style={{
+                  fontSize: "12px",
+                  letterSpacing: "0.5px",
+                  textTransform: "uppercase",
+                  marginBottom: "10px",
+                }}
+              >
+                Tenant
+              </h2>
+
+              <div className="bg-card hairline rounded-xl" style={{ padding: "14px 16px" }}>
+                <div className="flex items-center" style={{ gap: "12px", marginBottom: "12px" }}>
+                  <div
+                    className="rounded-full flex items-center justify-center shrink-0"
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      backgroundColor: "#E1ECF7",
+                      color: "#2E5A8C",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {data.tenant.initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[14px] font-medium text-foreground">
+                        {data.tenant.name}
+                      </span>
+                      <span
+                        className="text-[11px]"
+                        style={{
+                          color: "#3B6D11",
+                          backgroundColor: "#EAF3DE",
+                          padding: "2px 8px",
+                          borderRadius: "8px",
+                        }}
+                      >
+                        Verified
+                      </span>
+                    </div>
+                    <p className="text-[12px] text-muted-foreground mt-1 tabular-nums">
+                      {data.tenant.rating.toFixed(1)} ★ · tenant since {data.tenant.since}
+                    </p>
+                  </div>
+                  <button className="text-[12px] text-muted-foreground shrink-0 hover:text-foreground transition-colors">
+                    Message →
+                  </button>
+                </div>
+
+                <div className="hairline-t" style={{ paddingTop: "12px" }}>
+                  <p
+                    className="font-medium"
+                    style={{
+                      fontSize: "11px",
+                      letterSpacing: "0.5px",
+                      textTransform: "uppercase",
+                      color: "hsl(var(--muted-foreground) / 0.7)",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Recent activity
+                  </p>
+                  {data.activity.map((a, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between gap-3 text-[13px]"
+                      style={{ padding: "4px 0" }}
+                    >
+                      <span className="text-foreground truncate">{a.title}</span>
+                      <span
+                        className="shrink-0 tabular-nums"
+                        style={{ color: "hsl(var(--muted-foreground) / 0.7)" }}
+                      >
+                        {a.date}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* What's coming up column */}
+            <section>
+              <h2
+                className="font-medium text-muted-foreground"
+                style={{
+                  fontSize: "12px",
+                  letterSpacing: "0.5px",
+                  textTransform: "uppercase",
+                  marginBottom: "10px",
+                }}
+              >
+                What's coming up
+              </h2>
+
+              <div className="bg-card hairline rounded-xl" style={{ padding: "4px 0" }}>
+                {data.upcoming.map((group, gi) => (
+                  <div
+                    key={group.label}
+                    className={gi > 0 ? "hairline-t" : ""}
+                    style={gi > 0 ? { marginTop: "4px" } : undefined}
+                  >
+                    <p
+                      className="font-medium"
+                      style={{
+                        fontSize: "11px",
+                        letterSpacing: "0.5px",
+                        textTransform: "uppercase",
+                        color: "hsl(var(--muted-foreground) / 0.7)",
+                        padding: "10px 16px 4px 16px",
+                      }}
+                    >
+                      {group.label}
+                    </p>
+                    {group.items.map((it) => (
+                      <div
+                        key={it.title}
+                        className="flex items-center justify-between gap-3"
+                        style={{
+                          padding: "8px 16px",
+                          borderLeft: it.overdue ? `3px solid ${RED_ACCENT}` : undefined,
+                        }}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-foreground">{it.title}</p>
+                          <p className="text-[12px] text-muted-foreground mt-0.5">{it.sub}</p>
+                        </div>
+                        <span
+                          className="text-[12px] shrink-0 tabular-nums"
+                          style={{
+                            color: it.overdue ? RED_MID : "hsl(var(--muted-foreground))",
+                            fontWeight: it.overdue ? 500 : 400,
+                          }}
+                        >
+                          {it.right}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
