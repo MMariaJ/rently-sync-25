@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
 import {
-  Building2, TrendingUp, AlertTriangle, Shield, CalendarClock,
-  ChevronRight, Star, Sparkles,
+  Building2, TrendingUp, AlertTriangle, Shield,
+  ChevronRight, Star, Sparkles, CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ComplianceDonut } from "./ComplianceDonut";
 import { StarRating } from "./StarRating";
+import { DeadlineCalendar, type DeadlineDate } from "./DeadlineCalendar";
 import {
   TENANT_INFO, HMO_TENANTS, VAULT_INIT,
   LANDLORD_PROFILE, PROP_RATINGS, DOC_VALIDITY_BY_PROP,
@@ -14,7 +15,6 @@ import {
 import { getPropertyAlerts, getComplianceForProperty } from "@/data/helpers";
 
 // An alert is "critical" only when truly overdue / expired / missing.
-// "Expiring soon" lives on the property page, not the dashboard summary.
 const isCritical = (a: { text: string; severity: "high" | "medium" }) => {
   if (a.severity !== "high") return false;
   const t = a.text.toLowerCase();
@@ -48,7 +48,19 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
     ? allRatings.reduce((s, r) => s + r.rating * r.count, 0) / totalReviews
     : 0;
 
-  // (calendar + chart removed; deadlines surface inside the merged property card)
+  // Aggregate deadlines across all properties for the dashboard calendar
+  const allDeadlines: DeadlineDate[] = portfolio.flatMap((p) => {
+    const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
+    const shortAddr = p.address.split(",")[0];
+    return Object.entries(validity)
+      .filter(([, v]) => v.status === "expired" || (v.days > 0 && v.days <= 365))
+      .map(([name, v]) => {
+        const dt = new Date(v.expiry);
+        if (isNaN(dt.getTime())) return null;
+        return { date: dt, label: name, status: v.status, days: v.days, property: shortAddr };
+      })
+      .filter(Boolean) as DeadlineDate[];
+  }).sort((a, b) => a.days - b.days);
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -59,12 +71,12 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
 
   return (
     <div className="space-y-5 pb-12">
-      {/* Hero banner — greeting + rating */}
+      {/* Hero banner */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 via-primary to-primary/80 p-6 text-primary-foreground"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 via-primary to-primary/80 p-6 text-primary-foreground"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary-foreground)/0.08),transparent_60%)]" />
         <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-primary-foreground/5" />
@@ -91,72 +103,52 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
         </div>
       </motion.div>
 
-      {/* 4 KPI cards in a row */}
+      {/* 4 KPI cards — rounder, softer */}
       <motion.div
-        className="grid grid-cols-4 gap-3"
+        className="grid grid-cols-2 md:grid-cols-4 gap-3"
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.06 }}
       >
         <KPICard label="Properties" value={portfolio.length.toString()}
-          icon={<Building2 className="w-4 h-4" />} color="text-primary" bgColor="bg-landlord-light" />
+          icon={<Building2 className="w-4 h-4" />} />
         <KPICard label="Monthly Income" value={`£${monthlyIncome.toLocaleString()}`}
-          icon={<TrendingUp className="w-4 h-4" />} color="text-success" bgColor="bg-success-muted" />
+          icon={<TrendingUp className="w-4 h-4" />} />
         <KPICard label="Compliance" value={`${avgCompliance}%`}
-          icon={<ComplianceDonut percentage={avgCompliance} size={24} strokeWidth={3} showLabel={false} />}
-          color={avgCompliance >= 80 ? "text-success" : avgCompliance >= 50 ? "text-warning" : "text-danger"}
-          bgColor={avgCompliance >= 80 ? "bg-success-muted" : avgCompliance >= 50 ? "bg-warning-muted" : "bg-danger-muted"} />
+          icon={<ComplianceDonut percentage={avgCompliance} size={24} strokeWidth={3} showLabel={false} />} />
         <KPICard label="Action Items" value={criticalAlerts.length.toString()}
-          icon={<AlertTriangle className="w-4 h-4" />}
-          color={criticalAlerts.length > 0 ? "text-danger" : "text-success"}
-          bgColor={criticalAlerts.length > 0 ? "bg-danger-muted" : "bg-success-muted"} />
+          icon={<AlertTriangle className="w-4 h-4" />} />
       </motion.div>
 
-      {/* Merged: Property compliance + ratings + key alerts */}
-      <motion.div
-        className="bg-card rounded-xl border border-border p-5"
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.12 }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-            <Shield className="w-3.5 h-3.5 text-primary" /> Property overview
-          </h2>
-          <button onClick={onNavigateToProperties} className="text-[10px] text-primary font-semibold hover:underline flex items-center gap-0.5">
-            View all <ChevronRight className="w-2.5 h-2.5" />
-          </button>
-        </div>
+      {/* Split: Property overview (left) + Deadlines calendar (right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Property overview */}
+        <motion.div
+          className="bg-card rounded-3xl border border-border p-5 shadow-card"
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.12 }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-primary" /> Property overview
+            </h2>
+            <button onClick={onNavigateToProperties} className="text-[10px] text-primary font-semibold hover:underline flex items-center gap-0.5">
+              View all <ChevronRight className="w-2.5 h-2.5" />
+            </button>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {portfolio.map((p) => {
-            const pct = getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo);
-            const pr = PROP_RATINGS[p.id] || { rating: 0, count: 0 };
-            const propAlerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
-            const keyAlerts = propAlerts
-              .filter((a) => isCritical(a) || a.severity === "high")
-              .sort((a, b) => (isCritical(a) === isCritical(b) ? 0 : isCritical(a) ? -1 : 1))
-              .slice(0, 2);
+          <div className="space-y-2.5">
+            {portfolio.map((p) => {
+              const pct = getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo);
+              const pr = PROP_RATINGS[p.id] || { rating: 0, count: 0 };
+              const propAlerts = getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT);
+              const critCount = propAlerts.filter(isCritical).length;
+              const warnCount = propAlerts.length - critCount;
 
-            const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
-            // Surface a deadline that ISN'T already mentioned in the alerts above,
-            // so we don't duplicate "EPC expired" / "Gas Safety expiring" lines.
-            const alertText = keyAlerts.map(a => a.text.toLowerCase()).join(" ");
-            const isMentioned = (docName: string) => {
-              const key = docName.toLowerCase().split(" ")[0]; // "gas", "epc", "eicr"...
-              return alertText.includes(key);
-            };
-            const upcomingDeadlines = Object.entries(validity)
-              .filter(([name, v]) =>
-                (v.status === "expired" || v.days > 0) && !isMentioned(name)
-              )
-              .sort(([, a], [, b]) => a.days - b.days)
-              .slice(0, 2);
-
-            return (
-              <button
-                key={p.id}
-                onClick={() => onSelectProperty(p.id)}
-                className="relative flex flex-col gap-3 p-4 rounded-xl border border-border bg-card text-left transition-all hover:shadow-card hover:-translate-y-0.5 hover:border-border/80 group overflow-hidden"
-              >
-                <div className="flex items-start gap-3">
-                  <ComplianceDonut percentage={pct} size={44} strokeWidth={4} showLabel />
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => onSelectProperty(p.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-2xl border border-border bg-card text-left transition-all hover:shadow-card hover:-translate-y-0.5 hover:border-border/80 group"
+                >
+                  <ComplianceDonut percentage={pct} size={40} strokeWidth={4} showLabel />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{p.address.split(",")[0]}</p>
                     <div className="flex items-center gap-1 mt-0.5">
@@ -165,75 +157,72 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
                       <span className="text-[10px] text-muted-foreground">({pr.count})</span>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-foreground transition-colors shrink-0 mt-1" />
-                </div>
 
-                <div className="space-y-1 min-h-[40px]">
-                  {keyAlerts.length === 0 ? (
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                      All clear
-                    </div>
-                  ) : (
-                    keyAlerts.map((a, i) => {
-                      const critical = isCritical(a);
-                      return (
-                        <div key={i} className="flex items-start gap-1.5">
-                          <span className={cn(
-                            "w-1.5 h-1.5 rounded-full mt-1.5 shrink-0",
-                            critical ? "bg-danger" : "bg-warning"
-                          )} />
-                          <p className="text-[11px] leading-snug line-clamp-2 text-foreground/80">
-                            {a.text}
-                          </p>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                  {/* Alert pills — compact, color-coded count badges */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {propAlerts.length === 0 ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-success bg-success-muted rounded-full px-2 py-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                        All clear
+                      </span>
+                    ) : (
+                      <>
+                        {critCount > 0 && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-danger bg-danger-muted rounded-full px-2 py-1 tabular-nums">
+                            <AlertTriangle className="w-2.5 h-2.5" />
+                            {critCount} critical
+                          </span>
+                        )}
+                        {warnCount > 0 && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-warning bg-warning-muted rounded-full px-2 py-1 tabular-nums">
+                            {warnCount} review
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
 
-                <div className="pt-2 mt-auto border-t border-border/60 space-y-1">
-                  {upcomingDeadlines.length === 0 ? (
-                    <div className="flex items-center gap-1.5">
-                      <CalendarClock className="w-3 h-3 text-muted-foreground shrink-0" />
-                      <span className="text-[10px] text-muted-foreground">No upcoming deadlines</span>
-                    </div>
-                  ) : (
-                    upcomingDeadlines.map(([name, v], i) => (
-                      <div key={i} className="flex items-center gap-1.5">
-                        <CalendarClock className="w-3 h-3 text-muted-foreground shrink-0" />
-                        <span className="text-[10px] text-muted-foreground truncate flex-1">{name}</span>
-                        <span className={cn(
-                          "text-[10px] font-semibold tabular-nums shrink-0",
-                          v.status === "expired" ? "text-danger" :
-                          v.days <= 90 ? "text-warning" : "text-muted-foreground"
-                        )}>
-                          {v.status === "expired" ? "Overdue" : `Due ${v.expiry}`}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </motion.div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-foreground transition-colors shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* Portfolio deadlines calendar */}
+        <motion.div
+          className="bg-card rounded-3xl border border-border p-5 shadow-card"
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.18 }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+              <CalendarClock className="w-3.5 h-3.5 text-primary" /> Portfolio deadlines
+            </h2>
+            <span className="text-[9px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+              {allDeadlines.length}
+            </span>
+          </div>
+          {allDeadlines.length > 0 ? (
+            <DeadlineCalendar dates={allDeadlines} upcomingLimit={5} />
+          ) : (
+            <p className="text-xs text-muted-foreground">No upcoming deadlines.</p>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 }
 
-function KPICard({ label, value, icon, color, bgColor }: {
+function KPICard({ label, value, icon }: {
   label: string; value: string; icon: React.ReactNode;
-  color: string; bgColor: string;
 }) {
   return (
-    <div className="bg-card rounded-xl border border-border px-3.5 py-3 shadow-soft">
+    <div className="relative rounded-3xl border border-info/20 px-4 py-3.5 shadow-card overflow-hidden bg-gradient-to-br from-info-muted/60 via-card to-card">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
-        <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", bgColor, color)}>{icon}</div>
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+        <div className={cn("w-7 h-7 rounded-xl flex items-center justify-center bg-info-muted text-info")}>{icon}</div>
       </div>
-      <p className={cn("font-display text-xl font-bold", color)}>{value}</p>
+      <p className="font-display text-xl font-bold text-foreground">{value}</p>
     </div>
   );
 }
