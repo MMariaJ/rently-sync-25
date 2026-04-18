@@ -1,22 +1,12 @@
-import { ChevronRight } from "lucide-react";
-import { ComplianceDonut } from "./ComplianceDonut";
-import { DeadlineCalendar, type DeadlineDate } from "./DeadlineCalendar";
-import { HeroHealthyCard } from "./HeroHealthyCard";
+import { useState } from "react";
+import { HeroHealthyCard, type HeroState } from "./HeroHealthyCard";
 import { HealthRow } from "./HealthRow";
-import { YourPropertiesSection } from "./YourPropertiesSection";
-import { WhatsComingUpSection } from "./WhatsComingUpSection";
+import { YourPropertiesSection, type PropertyRow } from "./YourPropertiesSection";
+import { WhatsComingUpSection, type UpcomingGroup } from "./WhatsComingUpSection";
 import {
-  TENANT_INFO, HMO_TENANTS, VAULT_INIT,
-  LANDLORD_PROFILE, DOC_VALIDITY_BY_PROP,
+  VAULT_INIT,
   type Property, type VaultDoc,
 } from "@/data/constants";
-import { getPropertyAlerts, getComplianceForProperty } from "@/data/helpers";
-
-const isCritical = (a: { text: string; severity: "high" | "medium" }) => {
-  if (a.severity !== "high") return false;
-  const t = a.text.toLowerCase();
-  return t.includes("overdue") || t.includes("expired") || t.includes("missing") || t.includes("required");
-};
 
 interface DashboardProps {
   portfolio: Property[];
@@ -26,100 +16,126 @@ interface DashboardProps {
   onNavigateToProperties: () => void;
 }
 
-export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, onNavigateToProperties }: DashboardProps) {
-  const monthlyIncome = portfolio.reduce((s, p) => s + p.rent, 0);
-  const avgCompliance = Math.round(
-    portfolio.reduce((s, p) => s + getComplianceForProperty(p.id, "landlord", completed, allVaults, !!p.isHmo), 0) / Math.max(portfolio.length, 1)
-  );
-  const allAlerts = portfolio.flatMap(p => getPropertyAlerts(p.id, allVaults[p.id] || VAULT_INIT));
-  const criticalAlerts = allAlerts.filter(isCritical);
-  const totalTenants = portfolio.reduce((s, p) => {
-    if (p.isHmo && HMO_TENANTS[p.id]) return s + HMO_TENANTS[p.id].length;
-    if (TENANT_INFO[p.id]) return s + 1;
-    return s;
-  }, 0);
+const DEFAULT_PROPERTIES: PropertyRow[] = [
+  { name: "7 Crane Wharf",   rent: 1850, rating: 4.7, compliance: "All compliant · EICR due in 110 days",      payment: "Paid 3 Apr" },
+  { name: "14 Elmwood Road", rent: 1650, rating: 4.9, compliance: "All compliant · Gas safety due in 81 days", payment: "Paid 1 Apr" },
+  { name: "3 Saffron Court", rent: 1620, rating: 4.6, compliance: "All compliant · AST renews in 95 days",     payment: "Paid 1 Apr" },
+];
 
-  const allDeadlines: DeadlineDate[] = portfolio.flatMap((p) => {
-    const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
-    const shortAddr = p.address.split(",")[0];
-    return Object.entries(validity)
-      .filter(([, v]) => v.status === "expired" || (v.days > 0 && v.days <= 365))
-      .map(([name, v]) => {
-        const dt = new Date(v.expiry);
-        if (isNaN(dt.getTime())) return null;
-        return { date: dt, label: name, status: v.status, days: v.days, property: shortAddr };
-      })
-      .filter(Boolean) as DeadlineDate[];
-  }).sort((a, b) => a.days - b.days);
+const DEFAULT_GROUPS: UpcomingGroup[] = [
+  {
+    label: "This month",
+    amberPill: true,
+    items: [{ title: "Gas Safety Certificate", property: "14 Elmwood Road", days: 81 }],
+  },
+  {
+    label: "Later this year",
+    items: [
+      { title: "Tenancy Agreement", property: "3 Saffron Court", days: 95 },
+      { title: "EICR Report", property: "7 Crane Wharf", days: 110 },
+      { title: "Deposit Protection", property: "3 Saffron Court", days: 130 },
+    ],
+  },
+];
 
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
-  })();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function Dashboard(_props: DashboardProps) {
+  const [state, setState] = useState<HeroState>("healthy");
 
-  const isHealthy = criticalAlerts.length === 0;
-  const allValidity = portfolio.flatMap((p) => Object.values(DOC_VALIDITY_BY_PROP[p.id] || {}));
-  const overdue = allValidity.filter((v) => v.status === "expired").length;
-  const dueSoon = allValidity.filter((v) => v.status !== "expired" && v.days > 0 && v.days <= 60).length;
-  const compliant = allValidity.length - overdue - dueSoon;
-  const itemsOnTrack = compliant + dueSoon;
-  const nextDeadlineDays = allDeadlines[0]?.days ?? 0;
-  const monthName = new Date().toLocaleString("en-GB", { month: "long" });
+  // Compliance counts
+  const counts =
+    state === "compliance"
+      ? { compliant: 7, dueSoon: 1, overdue: 1 }
+      : { compliant: 9, dueSoon: 0, overdue: 0 };
 
-  return (
-    <div className="space-y-6 pb-12">
+  // Income figures
+  const expected = 5120;
+  const collected = state === "late" ? 3270 : 5120;
+
+  // Hero per state
+  const hero =
+    state === "healthy" ? (
       <HeroHealthyCard
-        itemsOnTrack={itemsOnTrack}
-        nextDeadlineDays={nextDeadlineDays}
+        state="healthy"
+        itemsOnTrack={9}
+        nextDeadlineDays={81}
         rating={4.7}
         reviewCount={14}
       />
+    ) : state === "compliance" ? (
+      <HeroHealthyCard
+        state="compliance"
+        headline="David, your EPC at 7 Crane Wharf expired 3 days ago"
+        secondary="Fines start at £5,000. This takes about 10 minutes to fix."
+        ctaLabel="Renew now"
+      />
+    ) : (
+      <HeroHealthyCard
+        state="late"
+        headline="David, rent at 7 Crane Wharf is 5 days late"
+        secondary="Sarah Chen · £1,850 · send a reminder or start the formal process."
+        ctaLabel="Send reminder"
+      />
+    );
+
+  // Properties per state
+  const properties: PropertyRow[] =
+    state === "compliance"
+      ? DEFAULT_PROPERTIES.map((p) =>
+          p.name === "7 Crane Wharf"
+            ? { ...p, accent: "danger", compliance: "EPC expired 3 days ago · EICR due in 110 days" }
+            : p
+        )
+      : state === "late"
+      ? DEFAULT_PROPERTIES.map((p) =>
+          p.name === "7 Crane Wharf" ? { ...p, accent: "danger", paymentDanger: "5 days late" } : p
+        )
+      : DEFAULT_PROPERTIES;
+
+  const closingNote =
+    state === "compliance"
+      ? `One thing to handle today ${"\u2726"}`
+      : state === "late"
+      ? `One thing to handle today ${"\u2726"}`
+      : `Nice work — you're on top of things ${"\u2726"}`;
+
+  return (
+    <div className="space-y-4 pb-12">
+      {/* State toggle — preview only */}
+      <div className="flex items-center gap-1 text-[12px]">
+        <span className="text-muted-foreground mr-2">Preview state:</span>
+        {(["healthy", "compliance", "late"] as HeroState[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => setState(s)}
+            className={`rounded-lg px-2.5 py-1 transition-colors ${
+              state === s
+                ? "bg-foreground text-background"
+                : "bg-secondary text-foreground hover:bg-secondary/70"
+            }`}
+          >
+            {s === "healthy" ? "All healthy" : s === "compliance" ? "Compliance issue" : "Late payment"}
+          </button>
+        ))}
+      </div>
+
+      {hero}
 
       <HealthRow
-        compliant={compliant}
-        dueSoon={dueSoon}
-        overdue={overdue}
-        rentCollected={monthlyIncome}
-        rentExpected={monthlyIncome}
-        month={monthName}
+        compliant={counts.compliant}
+        dueSoon={counts.dueSoon}
+        overdue={counts.overdue}
+        rentCollected={collected}
+        rentExpected={expected}
+        month="April"
+        incomeState={state === "late" ? "late" : "healthy"}
+        lateCount={state === "late" ? 1 : 0}
       />
 
-      {/* Greeting — no card, just text */}
-      <div>
-        <h1 className="text-[22px] text-foreground tracking-tight font-medium">
-          {greeting}, {LANDLORD_PROFILE.name.split(" ")[0]}
-        </h1>
-        <p className="text-[13px] text-muted-foreground mt-1">
-          {portfolio.length} properties · {totalTenants} tenants
-        </p>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 pt-2">
+        <YourPropertiesSection properties={properties} />
+        <WhatsComingUpSection groups={DEFAULT_GROUPS} closingNote={closingNote} />
       </div>
-
-      {/* KPI row — flat, no cards, hairline dividers */}
-      <div className="grid grid-cols-2 md:grid-cols-4 hairline-t hairline-b">
-        <Stat label="Properties" value={portfolio.length.toString()} />
-        <Stat label="Monthly income" value={`£${monthlyIncome.toLocaleString()}`} />
-        <Stat label="Compliance" value={`${avgCompliance}%`} />
-        <Stat label="Alerts" value={criticalAlerts.length.toString()} tone={criticalAlerts.length > 0 ? "danger" : "default"} />
-      </div>
-
-      {/* Split: Your properties + What's coming up */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
-        <YourPropertiesSection />
-        <WhatsComingUpSection />
-      </div>
-    </div>
-  );
-}
-
-function Stat({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "danger" }) {
-  return (
-    <div className="px-5 py-4 hairline-r last:border-r-0">
-      <p className="label-eyebrow mb-2">{label}</p>
-      <p className={`text-[22px] tracking-tight tabular-nums font-medium ${tone === "danger" ? "text-danger" : "text-foreground"}`}>
-        {value}
-      </p>
     </div>
   );
 }
