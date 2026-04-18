@@ -28,14 +28,12 @@ export function HeroHealthyCard({
   const isHealthy = state === "healthy";
 
   // Tints
-  const bg = isHealthy
-    ? "hsl(150 45% 35% / 0.08)"
-    : "hsl(0 59% 30% / 0.06)";
+  const bg = isHealthy ? "#E8F5E9" : "hsl(0 59% 30% / 0.06)";
   const avatarBg = isHealthy
-    ? "hsl(150 45% 35% / 0.15)"
+    ? "hsl(140 35% 75% / 0.6)"
     : "hsl(0 59% 30% / 0.12)";
-  const ink = isHealthy ? "hsl(150 45% 22%)" : "hsl(0 59% 24%)";
-  const inkSoft = isHealthy ? "hsl(150 35% 35%)" : "hsl(0 45% 38%)";
+  const ink = isHealthy ? "#1F5A3A" : "hsl(0 59% 24%)";
+  const inkSoft = isHealthy ? "#3A7355" : "hsl(0 45% 38%)";
 
   const defaultHealthyHeadline = `Everything's sorted, David ${"\u2726"}`;
   const defaultHealthySecondary = `All ${itemsOnTrack} compliance items on track · Next deadline in ${nextDeadlineDays} days`;
@@ -77,7 +75,7 @@ export function HeroHealthyCard({
             style={{ width: "0.5px", backgroundColor: "hsl(150 30% 35% / 0.25)" }}
           />
           <div className="flex flex-col items-end shrink-0">
-            <span className="text-[12px]" style={{ color: "hsl(150 30% 38%)" }}>
+            <span className="text-[11px]" style={{ color: inkSoft }}>
               Your rating
             </span>
             <div className="flex items-center gap-1 mt-0.5">
@@ -89,7 +87,7 @@ export function HeroHealthyCard({
               </span>
               <span style={{ color: "hsl(35 85% 45%)", fontSize: 14, lineHeight: 1 }}>★</span>
             </div>
-            <span className="text-[11px] mt-0.5" style={{ color: "hsl(150 30% 42%)" }}>
+            <span className="text-[11px] mt-0.5" style={{ color: "hsl(150 18% 55%)" }}>
               {reviewCount} tenant reviews
             </span>
           </div>

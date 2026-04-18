@@ -54,7 +54,7 @@ export function YourPropertiesSection({ properties = DEFAULT_PROPERTIES }: YourP
           return (
             <div
               key={p.name}
-              className={`px-4 py-3.5 ${idx > 0 ? "hairline-t" : ""}`}
+              className={`px-4 py-3 ${idx > 0 ? "hairline-t" : ""}`}
               style={isDanger ? { boxShadow: "inset 3px 0 0 0 hsl(var(--danger))" } : undefined}
             >
               <div className="flex items-center justify-between gap-3">
