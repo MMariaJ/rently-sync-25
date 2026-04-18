@@ -555,7 +555,10 @@ export function PropertyOverview({
                     >
                       Recent activity
                     </p>
-                    {data.activity.map((a, i) => (
+                    {[
+                      ...liveEvents.map(e => ({ title: e.title, date: e.date })),
+                      ...data.activity,
+                    ].slice(0, 6).map((a, i) => (
                       <div
                         key={i}
                         className="flex items-center justify-between gap-3 text-[13px]"
