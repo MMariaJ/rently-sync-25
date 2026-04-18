@@ -4,8 +4,14 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { LandlordHome } from "@/components/LandlordHome";
 import { PropertyOverview } from "@/components/PropertyOverview";
+import { TenantHome } from "@/components/TenantHome";
+import { TenantPropertyView } from "@/components/TenantPropertyView";
 import { PORTFOLIO, type Property } from "@/data/constants";
 import { useAppStore } from "@/state/useAppStore";
+
+// In a real app the tenant identity comes from auth. For the demo, the
+// "I'm a tenant" splash signs you in as Sarah Mitchell at 14 Elmwood Road.
+const TENANT_PROP_ID = "p1";
 
 export default function Index() {
   const [role, setRole] = useState<"landlord" | "tenant" | null>(null);
@@ -21,6 +27,7 @@ export default function Index() {
   }
 
   const isLL = role === "landlord";
+  const tenantProperty = portfolio.find(p => p.id === TENANT_PROP_ID)!;
   const prop = activeProp ? portfolio.find(p => p.id === activeProp) : null;
 
   const handleSignOut = () => {
@@ -30,7 +37,52 @@ export default function Index() {
   };
 
   const renderContent = () => {
-    if (isLL && activeProp && prop) {
+    // ---------- TENANT ----------
+    if (!isLL) {
+      if (activeProp) {
+        return (
+          <TenantPropertyView
+            property={tenantProperty}
+            completed={store.completed}
+            allVaults={store.vaults}
+            taskUploads={store.taskUploads}
+            extractedFacts={store.extractedFacts}
+            events={store.events}
+            reviews={store.reviews}
+            onUploadDocDirect={store.uploadDocDirect}
+            onMarkTaskDone={store.markTaskDone}
+            onUnmarkTaskDone={store.unmarkTaskDone}
+            onSetReminder={store.setReminder}
+            onFileCommsAttachment={store.fileCommsAttachment}
+            onAddReview={store.addReview}
+            onBack={() => setActiveProp(null)}
+          />
+        );
+      }
+
+      if (sidebarTab === "home") {
+        return (
+          <TenantHome
+            property={tenantProperty}
+            completed={store.completed}
+            allVaults={store.vaults}
+            onOpenProperty={() => setActiveProp(tenantProperty.id)}
+          />
+        );
+      }
+
+      // Other tenant tabs (alerts, reviews, settings) — placeholder for now.
+      return (
+        <div className="bg-card hairline rounded-xl p-12 text-center">
+          <p className="text-muted-foreground text-[13px]">
+            {sidebarTab.charAt(0).toUpperCase() + sidebarTab.slice(1)} — coming in the next iteration
+          </p>
+        </div>
+      );
+    }
+
+    // ---------- LANDLORD ----------
+    if (activeProp && prop) {
       return (
         <PropertyOverview
           property={prop}
@@ -52,7 +104,7 @@ export default function Index() {
       );
     }
 
-    if (isLL && sidebarTab === "home") {
+    if (sidebarTab === "home") {
       return (
         <Dashboard
           portfolio={portfolio}
@@ -64,7 +116,7 @@ export default function Index() {
       );
     }
 
-    if (isLL && sidebarTab === "properties") {
+    if (sidebarTab === "properties") {
       return (
         <LandlordHome
           portfolio={portfolio}
@@ -95,7 +147,7 @@ export default function Index() {
         }}
         onSignOut={handleSignOut}
         isLandlord={isLL}
-        alertCount={3}
+        alertCount={isLL ? 3 : 1}
         expanded={sidebarExpanded}
         onExpandedChange={setSidebarExpanded}
       />
