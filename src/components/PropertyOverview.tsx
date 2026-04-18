@@ -16,6 +16,8 @@ interface HmoTenant {
   status: "Paid" | "Due soon" | "Late";
   avatarBg: string;
   avatarFg: string;
+  stage: "Pre-move-in" | "Move-in" | "Active tenancy" | "Move-out";
+  alert?: { text: string; severity: "warn" | "danger" };
 }
 
 interface OverviewData {
@@ -136,9 +138,9 @@ const DATA_BY_ID: Record<string, OverviewData> = {
       tone: "neutral",
     },
     hmoTenants: [
-      { initials: "MC", name: "Mia Chen", rent: 650, since: "Jan 2026", status: "Paid",     avatarBg: "#E1ECF7", avatarFg: "#2E5A8C" },
-      { initials: "KA", name: "Kwame Asante", rent: 620, since: "Feb 2026", status: "Paid", avatarBg: "#EAF3DE", avatarFg: "#3B6D11" },
-      { initials: "SR", name: "Sofia Rossi",  rent: 600, since: "Mar 2026", status: "Due soon", avatarBg: "#F7E8DD", avatarFg: "#8C4A1F" },
+      { initials: "MC", name: "Mia Chen",      rent: 650, since: "Jan 2026", status: "Paid",     avatarBg: "#E1ECF7", avatarFg: "#2E5A8C", stage: "Active tenancy" },
+      { initials: "KA", name: "Kwame Asante",  rent: 620, since: "Feb 2026", status: "Paid",     avatarBg: "#EAF3DE", avatarFg: "#3B6D11", stage: "Active tenancy" },
+      { initials: "SR", name: "Sofia Rossi",   rent: 600, since: "Mar 2026", status: "Due soon", avatarBg: "#F7E8DD", avatarFg: "#8C4A1F", stage: "Active tenancy", alert: { text: "Rent due in 3 days · gentle reminder suggested", severity: "warn" } },
     ],
     activity: [
       { title: "Rent paid · £650 (Mia)", date: "1 Apr" },
@@ -336,9 +338,8 @@ export function PropertyOverview({ property, onBack }: PropertyOverviewProps) {
             );
           })()}
 
-          {/* Two-column body */}
-          <div className="grid gap-4" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
-            {/* Tenant column */}
+          {/* HMO: per-tenant cards directly below lifecycle */}
+          {data.isHmo && data.hmoTenants && (
             <section>
               <h2
                 className="font-medium text-muted-foreground"
@@ -349,60 +350,115 @@ export function PropertyOverview({ property, onBack }: PropertyOverviewProps) {
                   marginBottom: "10px",
                 }}
               >
-                {data.isHmo ? `Tenants · ${data.hmoTenants?.length ?? 0}` : "Tenant"}
+                {`Tenants · ${data.hmoTenants.length}`}
               </h2>
 
-              <div className="bg-card hairline rounded-xl" style={{ padding: "14px 16px" }}>
-                {data.isHmo && data.hmoTenants ? (
-                  <div className="flex flex-col" style={{ gap: "10px", marginBottom: "12px" }}>
-                    {data.hmoTenants.map((t, idx) => {
-                      const statusColor =
-                        t.status === "Paid" ? "#3B6D11" :
-                        t.status === "Late" ? "#A32D2D" : "#8C4A1F";
-                      const statusBg =
-                        t.status === "Paid" ? "#EAF3DE" :
-                        t.status === "Late" ? "#FBECEC" : "#F7E8DD";
-                      return (
+              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                {data.hmoTenants.map((t) => {
+                  const statusColor =
+                    t.status === "Paid" ? "#3B6D11" :
+                    t.status === "Late" ? "#A32D2D" : "#8C4A1F";
+                  const statusBg =
+                    t.status === "Paid" ? "#EAF3DE" :
+                    t.status === "Late" ? "#FBECEC" : "#F7E8DD";
+                  const alertColor = t.alert?.severity === "danger" ? RED_MID : "#8C4A1F";
+                  const alertBg = t.alert?.severity === "danger" ? "#FBECEC" : "#F7E8DD";
+                  return (
+                    <div
+                      key={t.name}
+                      className="bg-card hairline rounded-xl flex flex-col"
+                      style={{ padding: "14px 16px", gap: "12px" }}
+                    >
+                      <div className="flex items-center gap-3">
                         <div
-                          key={t.name}
-                          className={`flex items-center gap-3 ${idx > 0 ? "hairline-t" : ""}`}
-                          style={idx > 0 ? { paddingTop: "10px" } : undefined}
+                          className="rounded-full flex items-center justify-center shrink-0"
+                          style={{
+                            width: "40px", height: "40px",
+                            backgroundColor: t.avatarBg, color: t.avatarFg,
+                            fontSize: "13px", fontWeight: 500,
+                          }}
                         >
-                          <div
-                            className="rounded-full flex items-center justify-center shrink-0"
-                            style={{
-                              width: "36px", height: "36px",
-                              backgroundColor: t.avatarBg, color: t.avatarFg,
-                              fontSize: "12px", fontWeight: 500,
-                            }}
-                          >
-                            {t.initials}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-[14px] font-medium text-foreground">{t.name}</span>
-                              <span
-                                className="text-[11px]"
-                                style={{
-                                  color: statusColor, backgroundColor: statusBg,
-                                  padding: "2px 8px", borderRadius: "8px",
-                                }}
-                              >
-                                {t.status}
-                              </span>
-                            </div>
-                            <p className="text-[12px] text-muted-foreground mt-0.5 tabular-nums">
-                              £{t.rent}/mo · since {t.since}
-                            </p>
-                          </div>
-                          <button className="text-[12px] text-muted-foreground shrink-0 hover:text-foreground transition-colors">
-                            Message →
-                          </button>
+                          {t.initials}
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : data.tenant ? (
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-medium text-foreground truncate">{t.name}</p>
+                          <p className="text-[12px] text-muted-foreground mt-0.5 tabular-nums">
+                            £{t.rent}/mo · since {t.since}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span
+                          className="text-[11px]"
+                          style={{
+                            color: "hsl(var(--muted-foreground))",
+                            backgroundColor: "hsl(var(--secondary))",
+                            padding: "2px 8px",
+                            borderRadius: "8px",
+                          }}
+                        >
+                          {t.stage}
+                        </span>
+                        <span
+                          className="text-[11px]"
+                          style={{
+                            color: statusColor, backgroundColor: statusBg,
+                            padding: "2px 8px", borderRadius: "8px",
+                          }}
+                        >
+                          {t.status}
+                        </span>
+                      </div>
+
+                      {t.alert && (
+                        <div
+                          className="rounded-lg"
+                          style={{
+                            backgroundColor: alertBg,
+                            color: alertColor,
+                            padding: "8px 10px",
+                            fontSize: "12px",
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {t.alert.text}
+                        </div>
+                      )}
+
+                      <button
+                        className="text-[12px] text-muted-foreground hover:text-foreground transition-colors text-left"
+                      >
+                        Message →
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Body grid: 2-col for single-let, 1-col for HMO (no shared activity, tenant cards above) */}
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: data.isHmo ? "1fr" : "1.2fr 1fr" }}
+          >
+            {/* Tenant + Recent activity column — single-let only */}
+            {!data.isHmo && data.tenant && (
+              <section>
+                <h2
+                  className="font-medium text-muted-foreground"
+                  style={{
+                    fontSize: "12px",
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                    marginBottom: "10px",
+                  }}
+                >
+                  Tenant
+                </h2>
+
+                <div className="bg-card hairline rounded-xl" style={{ padding: "14px 16px" }}>
                   <div className="flex items-center" style={{ gap: "12px", marginBottom: "12px" }}>
                     <div
                       className="rounded-full flex items-center justify-center shrink-0"
@@ -437,41 +493,41 @@ export function PropertyOverview({ property, onBack }: PropertyOverviewProps) {
                       Message →
                     </button>
                   </div>
-                ) : null}
 
-                <div className="hairline-t" style={{ paddingTop: "12px" }}>
-                  <p
-                    className="font-medium"
-                    style={{
-                      fontSize: "11px",
-                      letterSpacing: "0.5px",
-                      textTransform: "uppercase",
-                      color: "hsl(var(--muted-foreground) / 0.7)",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    Recent activity
-                  </p>
-                  {data.activity.map((a, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between gap-3 text-[13px]"
-                      style={{ padding: "4px 0" }}
+                  <div className="hairline-t" style={{ paddingTop: "12px" }}>
+                    <p
+                      className="font-medium"
+                      style={{
+                        fontSize: "11px",
+                        letterSpacing: "0.5px",
+                        textTransform: "uppercase",
+                        color: "hsl(var(--muted-foreground) / 0.7)",
+                        marginBottom: "8px",
+                      }}
                     >
-                      <span className="text-foreground truncate">{a.title}</span>
-                      <span
-                        className="shrink-0 tabular-nums"
-                        style={{ color: "hsl(var(--muted-foreground) / 0.7)" }}
+                      Recent activity
+                    </p>
+                    {data.activity.map((a, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-3 text-[13px]"
+                        style={{ padding: "4px 0" }}
                       >
-                        {a.date}
-                      </span>
-                    </div>
-                  ))}
+                        <span className="text-foreground truncate">{a.title}</span>
+                        <span
+                          className="shrink-0 tabular-nums"
+                          style={{ color: "hsl(var(--muted-foreground) / 0.7)" }}
+                        >
+                          {a.date}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            )}
 
-            {/* What's coming up column */}
+            {/* What's coming up */}
             <section>
               <h2
                 className="font-medium text-muted-foreground"
