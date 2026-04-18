@@ -5,7 +5,7 @@ import { ComplianceDonut } from "./ComplianceDonut";
 import { DeadlineCalendar } from "./DeadlineCalendar";
 import { StarRating } from "./StarRating";
 import { TasksTab } from "./TasksTab";
-import { VaultTab } from "./VaultTab";
+import { LifecycleVaultTab as VaultTab } from "./LifecycleVaultTab";
 import { CommsTab } from "./CommsTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { ReviewsTab } from "./ReviewsTab";
