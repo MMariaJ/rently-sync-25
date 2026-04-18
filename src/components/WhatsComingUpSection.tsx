@@ -10,13 +10,16 @@ interface UpcomingGroup {
   amberPill?: boolean;
 }
 
-const GROUPS: UpcomingGroup[] = [
+interface WhatsComingUpSectionProps {
+  groups?: UpcomingGroup[];
+  closingNote?: string;
+}
+
+const DEFAULT_GROUPS: UpcomingGroup[] = [
   {
     label: "This month",
     amberPill: true,
-    items: [
-      { title: "Gas Safety Certificate", property: "14 Elmwood Road", days: 81 },
-    ],
+    items: [{ title: "Gas Safety Certificate", property: "14 Elmwood Road", days: 81 }],
   },
   {
     label: "Later this year",
@@ -34,7 +37,10 @@ const eyebrowStyle = {
   textTransform: "uppercase" as const,
 };
 
-export function WhatsComingUpSection() {
+export function WhatsComingUpSection({
+  groups = DEFAULT_GROUPS,
+  closingNote = `Nice work — you're on top of things ${"\u2726"}`,
+}: WhatsComingUpSectionProps) {
   return (
     <section>
       <div className="flex items-center justify-between mb-2.5">
@@ -47,7 +53,7 @@ export function WhatsComingUpSection() {
       </div>
 
       <div className="bg-card hairline rounded-xl py-1">
-        {GROUPS.map((group, gIdx) => (
+        {groups.map((group, gIdx) => (
           <div key={group.label} className={gIdx > 0 ? "hairline-t mt-1 pt-0" : ""}>
             <div
               className="font-medium px-4 pt-2.5 pb-1"
@@ -67,12 +73,8 @@ export function WhatsComingUpSection() {
                 className="flex items-center justify-between gap-3 px-4 py-2"
               >
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-foreground truncate">
-                    {item.title}
-                  </p>
-                  <p className="text-[12px] text-muted-foreground truncate">
-                    {item.property}
-                  </p>
+                  <p className="text-[13px] font-medium text-foreground truncate">{item.title}</p>
+                  <p className="text-[12px] text-muted-foreground truncate">{item.property}</p>
                 </div>
                 <div className="shrink-0">
                   {group.amberPill ? (
@@ -99,8 +101,10 @@ export function WhatsComingUpSection() {
       </div>
 
       <p className="text-[12px] text-muted-foreground text-center mt-2.5">
-        Nice work — you're on top of things {"\u2726"}
+        {closingNote}
       </p>
     </section>
   );
 }
+
+export type { UpcomingGroup, UpcomingItem };

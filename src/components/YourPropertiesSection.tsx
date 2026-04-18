@@ -4,9 +4,17 @@ interface PropertyRow {
   rating: number;
   compliance: string;
   payment: string;
+  /** "danger" → 3px red left edge; "default" → no accent */
+  accent?: "default" | "danger";
+  /** When set, replaces payment text with this red label */
+  paymentDanger?: string;
 }
 
-const PROPERTIES: PropertyRow[] = [
+interface YourPropertiesSectionProps {
+  properties?: PropertyRow[];
+}
+
+const DEFAULT_PROPERTIES: PropertyRow[] = [
   {
     name: "7 Crane Wharf",
     rent: 1850,
@@ -30,53 +38,64 @@ const PROPERTIES: PropertyRow[] = [
   },
 ];
 
-export function YourPropertiesSection() {
+export function YourPropertiesSection({ properties = DEFAULT_PROPERTIES }: YourPropertiesSectionProps) {
   return (
     <section>
       <h2
         className="font-medium text-muted-foreground mb-2.5"
-        style={{
-          fontSize: "12px",
-          letterSpacing: "0.5px",
-          textTransform: "uppercase",
-        }}
+        style={{ fontSize: "12px", letterSpacing: "0.5px", textTransform: "uppercase" }}
       >
         Your properties
       </h2>
 
       <div className="bg-card hairline rounded-xl overflow-hidden">
-        {PROPERTIES.map((p, idx) => (
-          <div
-            key={p.name}
-            className={`px-4 py-3.5 ${idx > 0 ? "hairline-t" : ""}`}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[14px] font-medium text-foreground truncate">
-                {p.name}
-              </span>
-              <div className="flex items-center gap-2.5 shrink-0">
-                <span className="text-[13px] font-medium tabular-nums text-foreground">
-                  £{p.rent.toLocaleString()}
+        {properties.map((p, idx) => {
+          const isDanger = p.accent === "danger";
+          return (
+            <div
+              key={p.name}
+              className={`px-4 py-3.5 ${idx > 0 ? "hairline-t" : ""}`}
+              style={isDanger ? { boxShadow: "inset 3px 0 0 0 hsl(var(--danger))" } : undefined}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[14px] font-medium text-foreground truncate">
+                  {p.name}
                 </span>
-                <span className="text-[12px] text-muted-foreground tabular-nums">
-                  {p.rating.toFixed(1)} ★
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="text-[13px] font-medium tabular-nums text-foreground">
+                    £{p.rent.toLocaleString()}
+                  </span>
+                  <span className="text-[12px] text-muted-foreground tabular-nums">
+                    {p.rating.toFixed(1)} ★
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 mt-1">
+                <span className="text-[13px] text-muted-foreground truncate">
+                  {p.compliance}
                 </span>
+                {p.paymentDanger ? (
+                  <span
+                    className="text-[11px] shrink-0 tabular-nums font-medium"
+                    style={{ color: "hsl(var(--danger))" }}
+                  >
+                    {p.paymentDanger}
+                  </span>
+                ) : (
+                  <span
+                    className="text-[11px] shrink-0 tabular-nums"
+                    style={{ color: "hsl(var(--muted-foreground) / 0.7)" }}
+                  >
+                    {p.payment}
+                  </span>
+                )}
               </div>
             </div>
-            <div className="flex items-center justify-between gap-3 mt-1">
-              <span className="text-[13px] text-muted-foreground truncate">
-                {p.compliance}
-              </span>
-              <span
-                className="text-[11px] shrink-0 tabular-nums"
-                style={{ color: "hsl(var(--muted-foreground) / 0.7)" }}
-              >
-                {p.payment}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
 }
+
+export type { PropertyRow };

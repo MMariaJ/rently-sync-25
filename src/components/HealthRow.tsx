@@ -1,3 +1,5 @@
+export type IncomeState = "healthy" | "late";
+
 interface HealthRowProps {
   compliant: number;
   dueSoon: number;
@@ -5,6 +7,8 @@ interface HealthRowProps {
   rentCollected: number;
   rentExpected: number;
   month: string;
+  incomeState?: IncomeState;
+  lateCount?: number;
 }
 
 export function HealthRow({
@@ -14,11 +18,13 @@ export function HealthRow({
   rentCollected,
   rentExpected,
   month,
+  incomeState = "healthy",
+  lateCount = 0,
 }: HealthRowProps) {
   const total = compliant + dueSoon + overdue;
-  const allHealthy = dueSoon === 0 && overdue === 0;
+  const allCompliant = dueSoon === 0 && overdue === 0;
 
-  const rentOnTrack = rentCollected >= rentExpected;
+  const isLate = incomeState === "late";
   const rentPct = rentExpected > 0 ? Math.min(100, (rentCollected / rentExpected) * 100) : 0;
 
   return (
@@ -32,38 +38,24 @@ export function HealthRow({
           </span>
         </div>
 
-        {/* Progress bar */}
         <div className="mt-3 flex items-center gap-[3px] h-2">
-          {allHealthy ? (
-            <div
-              className="h-full w-full rounded"
-              style={{ backgroundColor: "hsl(var(--success))" }}
-            />
+          {allCompliant ? (
+            <div className="h-full w-full rounded" style={{ backgroundColor: "hsl(var(--success))" }} />
           ) : (
             <>
               {compliant > 0 && (
-                <div
-                  className="h-full rounded"
-                  style={{ flex: compliant, backgroundColor: "hsl(var(--success))" }}
-                />
+                <div className="h-full rounded" style={{ flex: compliant, backgroundColor: "hsl(var(--success))" }} />
               )}
               {dueSoon > 0 && (
-                <div
-                  className="h-full rounded"
-                  style={{ flex: dueSoon, backgroundColor: "hsl(var(--warning))" }}
-                />
+                <div className="h-full rounded" style={{ flex: dueSoon, backgroundColor: "hsl(var(--warning))" }} />
               )}
               {overdue > 0 && (
-                <div
-                  className="h-full rounded"
-                  style={{ flex: overdue, backgroundColor: "hsl(var(--danger))" }}
-                />
+                <div className="h-full rounded" style={{ flex: overdue, backgroundColor: "hsl(var(--danger))" }} />
               )}
             </>
           )}
         </div>
 
-        {/* Bottom legend */}
         <div className="mt-3 flex items-center gap-4 text-[12px]">
           <span>
             <span className="font-medium tabular-nums text-foreground">{compliant}</span>{" "}
@@ -82,25 +74,32 @@ export function HealthRow({
         </div>
       </div>
 
-      {/* RIGHT — Inca */}
-      <div className="bg-card hairline rounded-xl px-5 py-4">
+      {/* RIGHT — Income collected */}
+      <div
+        className="bg-card hairline rounded-xl px-5 py-4 relative overflow-hidden"
+        style={
+          isLate
+            ? { boxShadow: "inset 3px 0 0 0 hsl(var(--danger))" }
+            : undefined
+        }
+      >
         <div className="flex items-center justify-between">
           <span className="text-[13px] text-muted-foreground">Income collected · {month}</span>
           <span
             className="text-[11px] rounded-lg px-2 py-0.5"
             style={
-              rentOnTrack
+              isLate
                 ? {
+                    backgroundColor: "hsl(var(--danger-muted))",
+                    color: "hsl(var(--danger))",
+                  }
+                : {
                     backgroundColor: "hsl(150 45% 35% / 0.12)",
                     color: "hsl(150 45% 22%)",
                   }
-                : {
-                    backgroundColor: "hsl(var(--warning-muted))",
-                    color: "hsl(var(--warning))",
-                  }
             }
           >
-            {rentOnTrack ? "On track" : "Behind"}
+            {isLate ? `${lateCount} late` : "On track"}
           </span>
         </div>
 
@@ -113,12 +112,15 @@ export function HealthRow({
           </span>
         </div>
 
-        <div className="mt-3 h-1 rounded bg-secondary overflow-hidden">
+        <div
+          className="mt-3 h-1 rounded overflow-hidden"
+          style={{ backgroundColor: isLate ? "hsl(240 5% 90%)" : "hsl(var(--secondary))" }}
+        >
           <div
             className="h-full rounded"
             style={{
               width: `${rentPct}%`,
-              backgroundColor: rentOnTrack ? "hsl(var(--success))" : "hsl(var(--warning))",
+              backgroundColor: isLate ? "hsl(240 8% 12%)" : "hsl(var(--success))",
             }}
           />
         </div>
