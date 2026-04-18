@@ -195,7 +195,7 @@ export function PropertyOverview({
   const currentPhase: LifecyclePhase = getLifecyclePhase(property, completed, allVaults);
   const phaseProgress = getPhaseProgress(property, completed, allVaults);
   const liveEvents = events.filter(e => e.propId === property.id);
-  void currentPhase; void phaseProgress; void extractedFacts;
+  void currentPhase; void phaseProgress; void extractedFacts; void onMarkTaskDone; void onUnmarkTaskDone; void taskUploads; void onUploadDoc; void onSetReminder; void onUploadDocDirect;
 
   // Soft red palette for hero
   const RED_BG = "#FBECEC";
@@ -307,24 +307,28 @@ export function PropertyOverview({
             );
           })()}
 
-          {/* Lifecycle tracker */}
+          {/* Lifecycle tracker — derived from real completion state */}
           {(() => {
-            const isHmo = !!data.isHmo;
-            const stages = isHmo
-              ? [
-                  { name: "Pre-move-in", count: "all done", active: false },
-                  { name: "Move-in", count: "all done", active: false },
-                  { name: "Active tenancy", count: "ongoing", active: true },
-                  { name: "Move-out", count: "no open tasks", active: false },
-                ]
-              : [
-                  { name: "Pre-move-in", count: "1 task open", active: true },
-                  { name: "Move-in", count: "no open tasks", active: false },
-                  { name: "Active tenancy", count: "ongoing", active: false },
-                  { name: "Move-out", count: "no open tasks", active: false },
-                ];
-            const summary = isHmo ? "All tenancies in active stage" : "1 open in 1 stage";
-            const nextUp = isHmo ? "Schedule annual gas safety inspection" : "Set initial meter readings";
+            const phaseLabels: Record<LifecyclePhase, string> = {
+              "Pre-Move-In": "Pre-move-in",
+              "Move-In": "Move-in",
+              "During Tenancy": "Active tenancy",
+              "Move-Out": "Move-out",
+            };
+            const phaseOrder: LifecyclePhase[] = ["Pre-Move-In", "Move-In", "During Tenancy", "Move-Out"];
+            const stages = phaseOrder.map(ph => {
+              const p = phaseProgress[ph];
+              const active = ph === currentPhase;
+              const count = p.open === 0
+                ? "all done"
+                : `${p.open} ${p.open === 1 ? "task" : "tasks"} open`;
+              return { name: phaseLabels[ph], count, active };
+            });
+            const totalOpen = phaseOrder.reduce((sum, ph) => sum + phaseProgress[ph].open, 0);
+            const summary = totalOpen === 0
+              ? "All caught up"
+              : `${totalOpen} open · ${phaseLabels[currentPhase]} stage`;
+            const nextUp = data.hero.headline;
             return (
               <div className="bg-card hairline rounded-xl" style={{ padding: "1.25rem" }}>
                 <div className="flex items-center justify-between mb-4">
