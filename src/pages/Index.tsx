@@ -4,27 +4,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { LandlordHome } from "@/components/LandlordHome";
 import { PropertyOverview } from "@/components/PropertyOverview";
-import {
-  PORTFOLIO, VAULT_INIT, COMPLETED_INIT,
-  type Property, type VaultDoc,
-} from "@/data/constants";
-
-const P1_VAULT_INIT: VaultDoc[] = VAULT_INIT.map(d =>
-  d.name === "Tenancy Agreement (AST)" ? { ...d, status: "uploaded" as const, timestamp: "01 Feb 2026" } : d
-);
-
-const P2_VAULT_INIT: VaultDoc[] = VAULT_INIT.map(d =>
-  d.name === "EPC Certificate" ? { ...d, status: "pending" as const } :
-    ["Tenancy Agreement (AST)", "Gas Safety Certificate", "EICR Report", "How to Rent Guide",
-      "Deposit Protection Certificate", "Move-In Inventory"].includes(d.name)
-      ? { ...d, status: "uploaded" as const, timestamp: "15 Mar 2025" } : d
-);
-
-const P3_VAULT_INIT: VaultDoc[] = VAULT_INIT.map(d =>
-  ["Tenancy Agreement (AST)", "Gas Safety Certificate", "EPC Certificate", "EICR Report",
-    "How to Rent Guide", "Deposit Protection Certificate", "Move-In Inventory"].includes(d.name)
-    ? { ...d, status: "uploaded" as const, timestamp: "01 Jan 2026" } : d
-);
+import { PORTFOLIO, type Property } from "@/data/constants";
+import { useAppStore } from "@/state/useAppStore";
 
 export default function Index() {
   const [role, setRole] = useState<"landlord" | "tenant" | null>(null);
@@ -32,12 +13,8 @@ export default function Index() {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [activeProp, setActiveProp] = useState<string | null>(null);
   const [portfolio] = useState<Property[]>(PORTFOLIO);
-  const [completed] = useState<Record<string, boolean>>({ ...COMPLETED_INIT });
-  const [allVaults] = useState<Record<string, VaultDoc[]>>({
-    p1: P1_VAULT_INIT,
-    p2: P2_VAULT_INIT,
-    p3: P3_VAULT_INIT,
-  });
+
+  const store = useAppStore();
 
   if (!role) {
     return <SplashScreen onSelectRole={(r) => { setRole(r); setSidebarTab("home"); }} />;
@@ -57,8 +34,16 @@ export default function Index() {
       return (
         <PropertyOverview
           property={prop}
-          completed={completed}
-          allVaults={allVaults}
+          completed={store.completed}
+          allVaults={store.vaults}
+          taskUploads={store.taskUploads}
+          extractedFacts={store.extractedFacts}
+          events={store.events}
+          onUploadDoc={store.uploadDoc}
+          onUploadDocDirect={store.uploadDocDirect}
+          onMarkTaskDone={store.markTaskDone}
+          onUnmarkTaskDone={store.unmarkTaskDone}
+          onSetReminder={store.setReminder}
           onBack={() => setActiveProp(null)}
         />
       );
@@ -68,8 +53,8 @@ export default function Index() {
       return (
         <Dashboard
           portfolio={portfolio}
-          completed={completed}
-          allVaults={allVaults}
+          completed={store.completed}
+          allVaults={store.vaults}
           onSelectProperty={(id) => setActiveProp(id)}
           onNavigateToProperties={() => setSidebarTab("properties")}
         />
@@ -80,8 +65,8 @@ export default function Index() {
       return (
         <LandlordHome
           portfolio={portfolio}
-          completed={completed}
-          allVaults={allVaults}
+          completed={store.completed}
+          allVaults={store.vaults}
           onSelectProperty={(id) => setActiveProp(id)}
           onAddProperty={() => {}}
         />
