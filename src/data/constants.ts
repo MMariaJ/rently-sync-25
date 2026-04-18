@@ -115,15 +115,23 @@ export const DOC_VALIDITY_BY_PROP: Record<string, Record<string, DocValidity>> =
 };
 
 export const HMO_TENANTS: Record<string, Array<{
-  id: string; name: string; rent: number; deposit: number; depositScheme: string;
+  id: string; name: string; room: string; rent: number; deposit: number; depositScheme: string;
   depositRef: string; leaseStart: string; leaseEnd: string; avatarUrl: string;
   verified: boolean; since: string; email: string; tasksDone: number; tasksTotal: number;
   rating: number; reviewCount: number;
+  // Payments — current month
+  paymentStatus: "paid" | "upcoming" | "late";
+  paymentRef: string;     // bank reference for the most recent rent payment
+  paidDate?: string;      // when the current month's rent was received
+  dueDate: string;        // when this month's rent is/was due
+  daysLate?: number;      // populated when status === "late"
+  // 6-month reliability sparkline (most recent month last)
+  reliability: { onTime: number; total: number };
 }>> = {
   p3: [
-    { id: "ht1", name: "Mia Chen", rent: 650, deposit: 650, depositScheme: "MyDeposits", depositRef: "MD2026-33101", leaseStart: "01 Jan 2026", leaseEnd: "31 Dec 2026", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face", verified: true, since: "January 2026", email: "m.chen@email.com", tasksDone: 8, tasksTotal: 12, rating: 4.8, reviewCount: 3 },
-    { id: "ht2", name: "Kwame Asante", rent: 620, deposit: 620, depositScheme: "DPS", depositRef: "DPS2026-44205", leaseStart: "15 Feb 2026", leaseEnd: "14 Feb 2027", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face", verified: true, since: "February 2026", email: "k.asante@email.com", tasksDone: 5, tasksTotal: 12, rating: 4.5, reviewCount: 2 },
-    { id: "ht3", name: "Sofia Rossi", rent: 600, deposit: 600, depositScheme: "MyDeposits", depositRef: "MD2026-33209", leaseStart: "01 Mar 2026", leaseEnd: "28 Feb 2027", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face", verified: true, since: "March 2026", email: "s.rossi@email.com", tasksDone: 3, tasksTotal: 12, rating: 4.2, reviewCount: 1 },
+    { id: "ht1", name: "Mia Chen", room: "1", rent: 650, deposit: 650, depositScheme: "MyDeposits", depositRef: "MD2026-33101", leaseStart: "01 Jan 2026", leaseEnd: "31 Dec 2026", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face", verified: true, since: "January 2026", email: "m.chen@email.com", tasksDone: 8, tasksTotal: 12, rating: 4.8, reviewCount: 3, paymentStatus: "paid", paymentRef: "OB-MC-04261", paidDate: "1 Apr 2026", dueDate: "1 Apr 2026", reliability: { onTime: 6, total: 6 } },
+    { id: "ht2", name: "Kwame Asante", room: "2", rent: 620, deposit: 620, depositScheme: "DPS", depositRef: "DPS2026-44205", leaseStart: "15 Feb 2026", leaseEnd: "14 Feb 2027", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face", verified: true, since: "February 2026", email: "k.asante@email.com", tasksDone: 5, tasksTotal: 12, rating: 4.5, reviewCount: 2, paymentStatus: "paid", paymentRef: "OB-KA-04158", paidDate: "15 Apr 2026", dueDate: "15 Apr 2026", reliability: { onTime: 2, total: 2 } },
+    { id: "ht3", name: "Sofia Rossi", room: "3", rent: 600, deposit: 600, depositScheme: "MyDeposits", depositRef: "MD2026-33209", leaseStart: "01 Mar 2026", leaseEnd: "28 Feb 2027", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face", verified: true, since: "March 2026", email: "s.rossi@email.com", tasksDone: 3, tasksTotal: 12, rating: 4.2, reviewCount: 1, paymentStatus: "upcoming", paymentRef: "OB-SR-04309", dueDate: "20 Apr 2026", reliability: { onTime: 1, total: 1 } },
   ],
 };
 
