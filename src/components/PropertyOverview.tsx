@@ -3,6 +3,7 @@ import type { Property, VaultDoc } from "@/data/constants";
 import { TasksTab } from "./TasksTab";
 import { LifecycleTasksTab } from "./LifecycleTasksTab";
 import { VaultTab } from "./VaultTab";
+import { ElmwoodVaultTab } from "./ElmwoodVaultTab";
 import { CommsTab } from "./CommsTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { ReviewsTab } from "./ReviewsTab";
