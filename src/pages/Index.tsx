@@ -3,9 +3,12 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { LandlordHome } from "@/components/LandlordHome";
-import { PropertyOverview } from "@/components/PropertyOverview";
+import { PropertyOverview, type TabKey } from "@/components/PropertyOverview";
 import { TenantHome } from "@/components/TenantHome";
 import { TenantPropertyView } from "@/components/TenantPropertyView";
+import { AlertsPage } from "@/components/AlertsPage";
+import { ReviewsPage } from "@/components/ReviewsPage";
+import { SettingsPage } from "@/components/SettingsPage";
 import { PORTFOLIO, type Property } from "@/data/constants";
 import { useAppStore } from "@/state/useAppStore";
 
@@ -13,11 +16,14 @@ import { useAppStore } from "@/state/useAppStore";
 // "I'm a tenant" splash signs you in as Sarah Mitchell at 14 Elmwood Road.
 const TENANT_PROP_ID = "p1";
 
+type SidebarTab = "home" | "properties" | "alerts" | "reviews" | "settings";
+
 export default function Index() {
   const [role, setRole] = useState<"landlord" | "tenant" | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<"home" | "properties" | "alerts" | "reviews" | "settings">("home");
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("home");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [activeProp, setActiveProp] = useState<string | null>(null);
+  const [propInitialTab, setPropInitialTab] = useState<TabKey | undefined>(undefined);
   const [portfolio] = useState<Property[]>(PORTFOLIO);
 
   const store = useAppStore();
@@ -28,32 +34,64 @@ export default function Index() {
 
   const isLL = role === "landlord";
   const tenantProperty = portfolio.find(p => p.id === TENANT_PROP_ID)!;
-  const prop = activeProp ? portfolio.find(p => p.id === activeProp) : null;
+  const visibleProperties = isLL ? portfolio : [tenantProperty];
 
   const handleSignOut = () => {
     setRole(null);
     setActiveProp(null);
+    setPropInitialTab(undefined);
     setSidebarTab("home");
   };
 
-  const renderContent = () => {
-    // ---------- TENANT ----------
-    if (!isLL) {
-      // Map sidebar tabs into the tenant's single property.
-      // home  → TenantHome dashboard
-      // alerts → property Tasks tab (the tenant's actionable alerts)
-      // reviews → property Reviews tab
-      // settings → placeholder
-      const sidebarToPropertyTab: Record<string, "Tasks" | "Reviews" | null> = {
-        alerts: "Tasks",
-        reviews: "Reviews",
-      };
-      const deepLinkTab = sidebarToPropertyTab[sidebarTab] ?? null;
+  const openProperty = (propId: string, tab?: TabKey) => {
+    setActiveProp(propId);
+    setPropInitialTab(tab);
+  };
 
-      if (activeProp || deepLinkTab) {
+  const openAlert = (propId: string, linkedTab?: string) => {
+    const tab: TabKey | undefined =
+      linkedTab === "vault" ? "Vault" :
+      linkedTab === "tasks" ? "Tasks" :
+      linkedTab === "payments" ? "Payments" :
+      linkedTab === "comms" ? "Comms" :
+      undefined;
+    openProperty(propId, tab);
+  };
+
+  const renderContent = () => {
+    // ---------- Property detail (both roles) ----------
+    if (activeProp) {
+      const prop = portfolio.find(p => p.id === activeProp);
+      if (prop) {
+        const onBack = () => { setActiveProp(null); setPropInitialTab(undefined); };
+        if (isLL) {
+          return (
+            <PropertyOverview
+              property={prop}
+              completed={store.completed}
+              allVaults={store.vaults}
+              taskUploads={store.taskUploads}
+              extractedFacts={store.extractedFacts}
+              events={store.events}
+              reviews={store.reviews}
+              onUploadDoc={store.uploadDoc}
+              onUploadDocDirect={store.uploadDocDirect}
+              onMarkTaskDone={store.markTaskDone}
+              onUnmarkTaskDone={store.unmarkTaskDone}
+              onSetReminder={store.setReminder}
+              onFileCommsAttachment={store.fileCommsAttachment}
+              onAddReview={store.addReview}
+              onBack={onBack}
+              initialTab={propInitialTab}
+            />
+          );
+        }
+        // Tenant property view (only valid for their own property)
+        const tenantTab =
+          propInitialTab === "Tasks" || propInitialTab === "Reviews" ? propInitialTab : undefined;
         return (
           <TenantPropertyView
-            property={tenantProperty}
+            property={prop}
             completed={store.completed}
             allVaults={store.vaults}
             taskUploads={store.taskUploads}
@@ -66,52 +104,47 @@ export default function Index() {
             onSetReminder={store.setReminder}
             onFileCommsAttachment={store.fileCommsAttachment}
             onAddReview={store.addReview}
-            onBack={() => { setActiveProp(null); setSidebarTab("home"); }}
-            initialTab={deepLinkTab ?? undefined}
+            onBack={onBack}
+            initialTab={tenantTab}
           />
         );
       }
+    }
 
-      if (sidebarTab === "home") {
-        return (
-          <TenantHome
-            property={tenantProperty}
-            completed={store.completed}
-            allVaults={store.vaults}
-            onOpenProperty={() => setActiveProp(tenantProperty.id)}
-          />
-        );
-      }
-
-      // settings → placeholder
+    // ---------- Top-level pages ----------
+    if (sidebarTab === "alerts") {
       return (
-        <div className="bg-card hairline rounded-xl p-12 text-center">
-          <p className="text-muted-foreground text-[13px]">
-            {sidebarTab.charAt(0).toUpperCase() + sidebarTab.slice(1)} — coming in the next iteration
-          </p>
-        </div>
+        <AlertsPage
+          portfolio={visibleProperties}
+          allVaults={store.vaults}
+          onOpenAlert={openAlert}
+        />
       );
     }
 
-    // ---------- LANDLORD ----------
-    if (activeProp && prop) {
+    if (sidebarTab === "reviews") {
       return (
-        <PropertyOverview
-          property={prop}
+        <ReviewsPage
+          portfolio={visibleProperties}
+          isLandlord={isLL}
+          onOpenProperty={(id) => openProperty(id, "Reviews")}
+        />
+      );
+    }
+
+    if (sidebarTab === "settings") {
+      return <SettingsPage isLandlord={isLL} onSignOut={handleSignOut} />;
+    }
+
+    // ---------- Home / properties (role-specific) ----------
+    if (!isLL) {
+      // Tenant home only
+      return (
+        <TenantHome
+          property={tenantProperty}
           completed={store.completed}
           allVaults={store.vaults}
-          taskUploads={store.taskUploads}
-          extractedFacts={store.extractedFacts}
-          events={store.events}
-          reviews={store.reviews}
-          onUploadDoc={store.uploadDoc}
-          onUploadDocDirect={store.uploadDocDirect}
-          onMarkTaskDone={store.markTaskDone}
-          onUnmarkTaskDone={store.unmarkTaskDone}
-          onSetReminder={store.setReminder}
-          onFileCommsAttachment={store.fileCommsAttachment}
-          onAddReview={store.addReview}
-          onBack={() => setActiveProp(null)}
+          onOpenProperty={() => openProperty(tenantProperty.id)}
         />
       );
     }
@@ -122,7 +155,7 @@ export default function Index() {
           portfolio={portfolio}
           completed={store.completed}
           allVaults={store.vaults}
-          onSelectProperty={(id) => setActiveProp(id)}
+          onSelectProperty={(id) => openProperty(id)}
           onNavigateToProperties={() => setSidebarTab("properties")}
         />
       );
@@ -134,20 +167,21 @@ export default function Index() {
           portfolio={portfolio}
           completed={store.completed}
           allVaults={store.vaults}
-          onSelectProperty={(id) => setActiveProp(id)}
+          onSelectProperty={(id) => openProperty(id)}
           onAddProperty={() => {}}
         />
       );
     }
 
-    return (
-      <div className="bg-card hairline rounded-xl p-12 text-center">
-        <p className="text-muted-foreground text-[13px]">
-          {sidebarTab.charAt(0).toUpperCase() + sidebarTab.slice(1)} — coming in the next iteration
-        </p>
-      </div>
-    );
+    return null;
   };
+
+  // Compute live alert count for the sidebar badge.
+  const alertCount = visibleProperties.reduce((sum, p) => {
+    const vault = store.vaults[p.id] ?? [];
+    // Inline import to avoid circular complications
+    return sum + getAlertCount(p.id, vault);
+  }, 0);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "hsl(240 6% 98%)" }}>
@@ -155,11 +189,12 @@ export default function Index() {
         activeTab={sidebarTab}
         onTabChange={(tab) => {
           setSidebarTab(tab);
-          if (activeProp) setActiveProp(null);
+          setActiveProp(null);
+          setPropInitialTab(undefined);
         }}
         onSignOut={handleSignOut}
         isLandlord={isLL}
-        alertCount={isLL ? 3 : 1}
+        alertCount={alertCount}
         expanded={sidebarExpanded}
         onExpandedChange={setSidebarExpanded}
       />
@@ -169,4 +204,11 @@ export default function Index() {
       </main>
     </div>
   );
+}
+
+// Light wrapper to avoid an extra import at the top of the module's body
+import { getPropertyAlerts } from "@/data/helpers";
+import type { VaultDoc } from "@/data/constants";
+function getAlertCount(propId: string, vault: VaultDoc[]) {
+  return getPropertyAlerts(propId, vault).length;
 }
