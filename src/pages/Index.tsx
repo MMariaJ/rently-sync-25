@@ -89,9 +89,9 @@ export default function Index() {
     }
 
     return (
-      <div className="bg-card rounded-xl border border-border p-12 text-center">
-        <p className="text-muted-foreground text-sm">
-          {sidebarTab.charAt(0).toUpperCase() + sidebarTab.slice(1)} — coming in next iteration
+      <div className="bg-card hairline rounded-xl p-12 text-center">
+        <p className="text-muted-foreground text-[13px]">
+          {sidebarTab.charAt(0).toUpperCase() + sidebarTab.slice(1)} — coming in the next iteration
         </p>
       </div>
     );
@@ -112,7 +112,7 @@ export default function Index() {
         onExpandedChange={setSidebarExpanded}
       />
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-[1100px] mx-auto px-6 py-8">
         {renderContent()}
       </main>
     </div>
