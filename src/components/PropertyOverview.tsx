@@ -5,7 +5,7 @@ import { LifecycleVaultTab } from "./LifecycleVaultTab";
 import { CommsTab } from "./CommsTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { ReviewsTab } from "./ReviewsTab";
-import type { ActivityEvent, AppActions } from "@/state/useAppStore";
+import type { ActivityEvent, AppActions, ReviewEntry } from "@/state/useAppStore";
 import type { ExtractedFacts, LifecyclePhase } from "@/state/engines";
 import { getLifecyclePhase, getPhaseProgress } from "@/state/engines";
 
@@ -16,11 +16,14 @@ export interface PropertyOverviewProps {
   taskUploads: Record<string, string>;
   extractedFacts: Record<string, ExtractedFacts>;
   events: ActivityEvent[];
+  reviews: ReviewEntry[];
   onUploadDoc: AppActions["uploadDoc"];
   onUploadDocDirect: AppActions["uploadDocDirect"];
   onMarkTaskDone: AppActions["markTaskDone"];
   onUnmarkTaskDone: AppActions["unmarkTaskDone"];
   onSetReminder: AppActions["setReminder"];
+  onFileCommsAttachment: AppActions["fileCommsAttachment"];
+  onAddReview: AppActions["addReview"];
   onBack: () => void;
 }
 
