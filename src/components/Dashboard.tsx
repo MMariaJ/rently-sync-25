@@ -58,19 +58,30 @@ export function Dashboard({ portfolio, completed, allVaults, onSelectProperty, o
   })();
 
   const isHealthy = criticalAlerts.length === 0;
-  const itemsOnTrack = portfolio.reduce((s, p) => {
-    const validity = DOC_VALIDITY_BY_PROP[p.id] || {};
-    return s + Object.values(validity).filter((v) => v.status !== "expired").length;
-  }, 0);
+  const allValidity = portfolio.flatMap((p) => Object.values(DOC_VALIDITY_BY_PROP[p.id] || {}));
+  const overdue = allValidity.filter((v) => v.status === "expired").length;
+  const dueSoon = allValidity.filter((v) => v.status !== "expired" && v.days > 0 && v.days <= 60).length;
+  const compliant = allValidity.length - overdue - dueSoon;
+  const itemsOnTrack = compliant + dueSoon;
   const nextDeadlineDays = allDeadlines[0]?.days ?? 0;
+  const monthName = new Date().toLocaleString("en-GB", { month: "long" });
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-12">
       <HeroHealthyCard
         itemsOnTrack={itemsOnTrack}
         nextDeadlineDays={nextDeadlineDays}
         rating={4.7}
         reviewCount={14}
+      />
+
+      <HealthRow
+        compliant={compliant}
+        dueSoon={dueSoon}
+        overdue={overdue}
+        rentCollected={monthlyIncome}
+        rentExpected={monthlyIncome}
+        month={monthName}
       />
 
       {/* Greeting — no card, just text */}
