@@ -12,6 +12,7 @@ interface PropertyRow {
 
 interface YourPropertiesSectionProps {
   properties?: PropertyRow[];
+  onSelect?: (name: string) => void;
 }
 
 const DEFAULT_PROPERTIES: PropertyRow[] = [
@@ -38,7 +39,7 @@ const DEFAULT_PROPERTIES: PropertyRow[] = [
   },
 ];
 
-export function YourPropertiesSection({ properties = DEFAULT_PROPERTIES }: YourPropertiesSectionProps) {
+export function YourPropertiesSection({ properties = DEFAULT_PROPERTIES, onSelect }: YourPropertiesSectionProps) {
   return (
     <section>
       <h2
@@ -52,9 +53,10 @@ export function YourPropertiesSection({ properties = DEFAULT_PROPERTIES }: YourP
         {properties.map((p, idx) => {
           const isDanger = p.accent === "danger";
           return (
-            <div
+            <button
               key={p.name}
-              className={`px-4 py-3 ${idx > 0 ? "hairline-t" : ""}`}
+              onClick={() => onSelect?.(p.name)}
+              className={`w-full text-left px-4 py-3 transition-colors hover:bg-secondary/40 ${idx > 0 ? "hairline-t" : ""}`}
               style={isDanger ? { boxShadow: "inset 3px 0 0 0 hsl(var(--danger))" } : undefined}
             >
               <div className="flex items-center justify-between gap-3">
@@ -90,7 +92,7 @@ export function YourPropertiesSection({ properties = DEFAULT_PROPERTIES }: YourP
                   </span>
                 )}
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
