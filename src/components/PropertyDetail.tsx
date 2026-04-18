@@ -2,8 +2,8 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
   ArrowLeft, Building2, CheckSquare, Lock, MessageSquare,
-  CreditCard, Star, User, AlertTriangle, ChevronRight, ChevronLeft, Check,
-  FileText, Clock, Shield, Flame, Zap, FileWarning, Scale, CalendarClock,
+  CreditCard, Star, User, AlertTriangle, ChevronRight, Check,
+  FileText, Shield, Flame, Zap, FileWarning, Scale, CalendarClock,
 } from "lucide-react";
 import { ComplianceDonut } from "./ComplianceDonut";
 import { DeadlineCalendar } from "./DeadlineCalendar";
