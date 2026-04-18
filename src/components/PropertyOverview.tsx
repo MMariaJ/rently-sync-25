@@ -1,16 +1,26 @@
 import { useState } from "react";
 import type { Property, VaultDoc } from "@/data/constants";
-import { TasksTab } from "./TasksTab";
 import { LifecycleTasksTab } from "./LifecycleTasksTab";
 import { LifecycleVaultTab } from "./LifecycleVaultTab";
 import { CommsTab } from "./CommsTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { ReviewsTab } from "./ReviewsTab";
+import type { ActivityEvent, AppActions } from "@/state/useAppStore";
+import type { ExtractedFacts, LifecyclePhase } from "@/state/engines";
+import { getLifecyclePhase, getPhaseProgress } from "@/state/engines";
 
-interface PropertyOverviewProps {
+export interface PropertyOverviewProps {
   property: Property;
   completed: Record<string, boolean>;
   allVaults: Record<string, VaultDoc[]>;
+  taskUploads: Record<string, string>;
+  extractedFacts: Record<string, ExtractedFacts>;
+  events: ActivityEvent[];
+  onUploadDoc: AppActions["uploadDoc"];
+  onUploadDocDirect: AppActions["uploadDocDirect"];
+  onMarkTaskDone: AppActions["markTaskDone"];
+  onUnmarkTaskDone: AppActions["unmarkTaskDone"];
+  onSetReminder: AppActions["setReminder"];
   onBack: () => void;
 }
 
