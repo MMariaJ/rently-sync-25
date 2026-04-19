@@ -12,6 +12,7 @@ import { toast } from "sonner";
 interface CommsTabProps {
   property: Property;
   onFileCommsAttachment?: AppActions["fileCommsAttachment"];
+  role?: "landlord" | "tenant";
 }
 
 interface Thread {
@@ -40,7 +41,7 @@ const AMBER_TEXT = "#854F0B";
 const RED_BG = "#FDF6F5";
 const RED_TEXT = "#A32D2D";
 
-const THREAD_CONTEXTS = ["Repair request", "Deposit deduction", "Rent review", "Pre-existing damage", "General"];
+const THREAD_CONTEXTS = ["Repair request", "Missed payment", "Deposit deduction", "Rent review", "Pre-existing damage", "General"];
 const REPAIR_STAGES = ["Reported", "Responded", "Contractor assigned", "Visit logged", "Resolved"];
 
 const VAULT_CATEGORIES = [
@@ -73,11 +74,28 @@ const INITIAL_MESSAGES: Message[] = [
   { id: "m5", sender: "landlord", text: "I've contacted a plumber who can come Thursday. Does 2pm work for you?", time: "2:45 PM", date: "2 Mar" },
 ];
 
-export function CommsTab({ property: p, onFileCommsAttachment }: CommsTabProps) {
-  const threads = MOCK_THREADS[p.id] || [];
+export function CommsTab({ property: p, onFileCommsAttachment, role = "landlord" }: CommsTabProps) {
+  const [threads, setThreads] = useState<Thread[]>(() => MOCK_THREADS[p.id] ?? []);
   const [activeThread, setActiveThread] = useState<Thread | null>(null);
   const [showNewThread, setShowNewThread] = useState(false);
   const totalUnread = threads.reduce((s, t) => s + t.unread, 0);
+
+  const createThread = (context: string, subject: string) => {
+    const now = new Date();
+    const timestamp = `${now.getDate()} ${now.toLocaleString("en-GB", { month: "short" })} ${now.getFullYear()}`;
+    const newThread: Thread = {
+      id: `th-${Date.now()}`,
+      context,
+      subject,
+      lastMessage: "Thread started.",
+      timestamp,
+      unread: 0,
+      repairStage: context === "Repair request" ? 0 : undefined,
+    };
+    setThreads((prev) => [newThread, ...prev]);
+    setShowNewThread(false);
+    setActiveThread(newThread);
+  };
 
   if (activeThread) {
     return (
@@ -86,6 +104,7 @@ export function CommsTab({ property: p, onFileCommsAttachment }: CommsTabProps) 
         onBack={() => setActiveThread(null)}
         property={p}
         onFileCommsAttachment={onFileCommsAttachment}
+        role={role}
       />
     );
   }
@@ -142,28 +161,36 @@ export function CommsTab({ property: p, onFileCommsAttachment }: CommsTabProps) 
         </div>
       )}
 
-      {showNewThread && <NewThreadModal onClose={() => setShowNewThread(false)} />}
+      {showNewThread && (
+        <NewThreadModal
+          onClose={() => setShowNewThread(false)}
+          onCreate={createThread}
+        />
+      )}
     </div>
   );
 }
 
 function ThreadView({
-  thread, onBack, property, onFileCommsAttachment,
+  thread, onBack, property, onFileCommsAttachment, role,
 }: {
   thread: Thread;
   onBack: () => void;
   property: Property;
   onFileCommsAttachment?: AppActions["fileCommsAttachment"];
+  role: "landlord" | "tenant";
 }) {
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>(
+    thread.id === "th1" ? INITIAL_MESSAGES : []
+  );
   const [draft, setDraft] = useState("");
   const [precheckOpen, setPrecheckOpen] = useState(false);
   const [attachPicker, setAttachPicker] = useState<null | { name: string; type: "image" | "file" }>(null);
 
-  const brief = useMemo(() => mediatorBriefFor(thread.context), [thread.context]);
+  const brief = useMemo(() => mediatorBriefFor(thread.context, role), [thread.context, role]);
   const check: LegalCheck | null = useMemo(() => legalPrecheck(draft), [draft]);
 
-  const senderForThread = thread.context === "Rent review" ? "James" : "James";
+  const senderForThread = role === "tenant" ? "Sarah" : "James";
 
   const performSend = (text: string) => {
     const now = new Date();
@@ -171,7 +198,7 @@ function ThreadView({
     const date = `${now.getDate()} ${now.toLocaleString("en-GB", { month: "short" })}`;
     setMessages((prev) => [
       ...prev,
-      { id: `m-${Date.now()}`, sender: "landlord", text, time, date },
+      { id: `m-${Date.now()}`, sender: role, text, time, date },
     ]);
     setDraft("");
     setPrecheckOpen(false);
@@ -202,7 +229,7 @@ function ThreadView({
       ...prev,
       {
         id: `m-${Date.now()}`,
-        sender: "landlord",
+        sender: role,
         text: "Attached.",
         time, date,
         attachment: { type: attachPicker.type, name: attachPicker.name },
@@ -282,7 +309,26 @@ function ThreadView({
               AI mediator · summary
             </p>
             <p className="text-[13px] text-foreground mt-1 leading-relaxed">{brief.summary}</p>
-            <p className="text-[12px] text-muted-foreground mt-1">Tenant intent: {brief.intent}</p>
+            <p className="text-[12px] text-muted-foreground mt-1">
+              {role === "landlord" ? "Tenant intent" : "What you want"}: {brief.intent}
+            </p>
+            {brief.legalOverview && (
+              <div
+                className="mt-3 rounded-lg p-3"
+                style={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: `0.5px solid ${PURPLE}33`,
+                }}
+              >
+                <p className="text-[11px] uppercase tracking-wider font-medium mb-1" style={{ color: PURPLE }}>
+                  Legal overview
+                </p>
+                <p className="text-[12px] text-foreground leading-relaxed">{brief.legalOverview}</p>
+                {brief.citation && (
+                  <p className="text-[11px] text-muted-foreground mt-1.5">{brief.citation}</p>
+                )}
+              </div>
+            )}
             {brief.suggestedReplies.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {brief.suggestedReplies.map((r) => (
@@ -307,44 +353,47 @@ function ThreadView({
 
       <div className="bg-card hairline rounded-xl overflow-hidden">
         <div className="p-5 space-y-3 max-h-[400px] overflow-y-auto">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={cn(
-                "flex",
-                msg.sender === "landlord" ? "justify-end" :
-                msg.sender === "system" ? "justify-center" : "justify-start"
-              )}
-            >
-              {msg.sender === "system" ? (
-                <div className="text-[11px] text-muted-foreground text-center max-w-[80%]">{msg.text}</div>
-              ) : (
-                <div className={cn(
-                  "max-w-[75%] rounded-xl px-3.5 py-2.5",
-                  msg.sender === "landlord"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-foreground"
-                )}>
-                  {msg.attachment && (
-                    <div className={cn(
-                      "flex items-center gap-2 p-2 rounded-lg mb-2 text-[12px]",
-                      msg.sender === "landlord" ? "bg-primary-foreground/10" : "bg-card"
-                    )}>
-                      <Image className="w-3.5 h-3.5" />
-                      <span>{msg.attachment.name}</span>
-                    </div>
-                  )}
-                  <p className="text-[13px] leading-relaxed">{msg.text}</p>
-                  <p className={cn(
-                    "text-[11px] mt-1",
-                    msg.sender === "landlord" ? "text-primary-foreground/70" : "text-muted-foreground"
+          {messages.map((msg) => {
+            const isSelf = msg.sender === role;
+            return (
+              <div
+                key={msg.id}
+                className={cn(
+                  "flex",
+                  msg.sender === "system" ? "justify-center" :
+                  isSelf ? "justify-end" : "justify-start"
+                )}
+              >
+                {msg.sender === "system" ? (
+                  <div className="text-[11px] text-muted-foreground text-center max-w-[80%]">{msg.text}</div>
+                ) : (
+                  <div className={cn(
+                    "max-w-[75%] rounded-xl px-3.5 py-2.5",
+                    isSelf
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-foreground"
                   )}>
-                    {msg.date} · {msg.time}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
+                    {msg.attachment && (
+                      <div className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg mb-2 text-[12px]",
+                        isSelf ? "bg-primary-foreground/10" : "bg-card"
+                      )}>
+                        <Image className="w-3.5 h-3.5" />
+                        <span>{msg.attachment.name}</span>
+                      </div>
+                    )}
+                    <p className="text-[13px] leading-relaxed">{msg.text}</p>
+                    <p className={cn(
+                      "text-[11px] mt-1",
+                      isSelf ? "text-primary-foreground/70" : "text-muted-foreground"
+                    )}>
+                      {msg.date} · {msg.time}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Live legal pre-check banner */}
@@ -554,7 +603,12 @@ function AttachPickerModal({
   );
 }
 
-function NewThreadModal({ onClose }: { onClose: () => void }) {
+function NewThreadModal({
+  onClose, onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (context: string, subject: string) => void;
+}) {
   const [context, setContext] = useState("");
   const [subject, setSubject] = useState("");
 
@@ -602,6 +656,7 @@ function NewThreadModal({ onClose }: { onClose: () => void }) {
           </button>
           <button
             disabled={!context || !subject}
+            onClick={() => onCreate(context, subject.trim())}
             className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-[13px] font-medium disabled:opacity-40 hover:opacity-90 transition-opacity"
           >
             Create thread

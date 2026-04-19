@@ -9,6 +9,9 @@ interface HealthRowProps {
   month: string;
   incomeState?: IncomeState;
   lateCount?: number;
+  // Historical miss flagged on the income card (e.g. a prior month that
+  // came in late or not at all). Shown as a subtle note under the bar.
+  missedPayment?: { address: string; month: string };
 }
 
 export function HealthRow({
@@ -20,6 +23,7 @@ export function HealthRow({
   month,
   incomeState = "healthy",
   lateCount = 0,
+  missedPayment,
 }: HealthRowProps) {
   const total = compliant + dueSoon + overdue;
   const allCompliant = dueSoon === 0 && overdue === 0;
@@ -124,6 +128,20 @@ export function HealthRow({
             }}
           />
         </div>
+
+        {missedPayment && (
+          <div className="mt-2.5 flex items-center gap-1.5 text-[11px]">
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: "hsl(var(--danger))" }}
+            />
+            <span className="text-muted-foreground">
+              1 missed payment ·{" "}
+              <span className="text-foreground font-medium">{missedPayment.address}</span> ·{" "}
+              {missedPayment.month}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

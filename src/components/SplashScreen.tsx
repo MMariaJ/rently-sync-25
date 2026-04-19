@@ -5,7 +5,7 @@
 // differentiated on two axes (colour + icon) so the choice reads at a
 // glance, in greyscale, and for colour-blind users.
 
-import { Home, User } from "lucide-react";
+import { Home, User, Shield } from "lucide-react";
 
 interface SplashScreenProps {
   onSelectRole: (role: "landlord" | "tenant") => void;
@@ -23,6 +23,35 @@ export function SplashScreen({ onSelectRole }: SplashScreenProps) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6 py-16">
       <div className="w-full mx-auto" style={{ maxWidth: "920px" }}>
+        {/* Brand lockup — logo placeholder + wordmark */}
+        <div
+          className="flex items-center justify-center"
+          style={{ gap: "10px", marginBottom: "2.5rem" }}
+        >
+          <div
+            className="flex items-center justify-center"
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "10px",
+              backgroundColor: PURPLE,
+            }}
+            aria-hidden="true"
+          >
+            <Shield size={18} strokeWidth={2} color="#ffffff" />
+          </div>
+          <span
+            style={{
+              fontSize: "20px",
+              fontWeight: 600,
+              letterSpacing: "-0.01em",
+              color: PURPLE_DEEP,
+            }}
+          >
+            Homebound
+          </span>
+        </div>
+
         {/* Headline block */}
         <div className="text-center" style={{ marginBottom: "3.5rem" }}>
           <h1
@@ -80,25 +109,6 @@ export function SplashScreen({ onSelectRole }: SplashScreenProps) {
           />
         </div>
 
-        {/* Trust line footer */}
-        <div
-          className="text-center"
-          style={{
-            borderTop: "0.5px solid hsl(var(--border))",
-            paddingTop: "1.5rem",
-          }}
-        >
-          <p
-            className="text-muted-foreground"
-            style={{
-              fontSize: "11px",
-              letterSpacing: "0.3px",
-              color: "hsl(var(--muted-foreground) / 0.7)",
-            }}
-          >
-            Built for UK landlords and tenants · Compliant with the Housing Act 2004
-          </p>
-        </div>
       </div>
     </div>
   );

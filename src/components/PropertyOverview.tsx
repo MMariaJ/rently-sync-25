@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Property, VaultDoc } from "@/data/constants";
-import { LifecycleTasksTab } from "./LifecycleTasksTab";
+import { TASK_DATA, PAYMENTS_BY_PROP, type Property, type VaultDoc } from "@/data/constants";
+import { LifecycleTasksTab, naturalStage, type StageName } from "./LifecycleTasksTab";
 import { LifecycleVaultTab } from "./LifecycleVaultTab";
 import { CommsTab } from "./CommsTab";
 import { PaymentsTab } from "./PaymentsTab";
@@ -38,6 +38,7 @@ interface HmoTenant {
   status: "Paid" | "Due soon" | "Late";
   avatarBg: string;
   avatarFg: string;
+  avatarUrl?: string;
   stage: "Pre-move-in" | "Move-in" | "Active tenancy" | "Move-out";
   alert?: { text: string; severity: "warn" | "danger" };
 }
@@ -52,13 +53,14 @@ interface OverviewData {
     headline: string;
     subline: string;
     cta: string;
-    tone?: "danger" | "neutral";
+    tone?: "danger" | "neutral" | "warning";
   };
   tenant?: {
     initials: string;
     name: string;
     rating: number;
     since: string;
+    avatarUrl?: string;
   };
   hmoTenants?: HmoTenant[];
   activity: { title: string; date: string }[];
@@ -81,15 +83,17 @@ const DATA_BY_ID: Record<string, OverviewData> = {
     reviewCount: 5,
     rent: 1800,
     hero: {
-      headline: "EPC certificate expired 3 days ago",
-      subline: "This blocks James's move-in. Fines start at £5,000 · about 10 minutes to fix.",
-      cta: "Renew now",
+      headline: "EPC certificate — renewal due in 28 days",
+      subline: "Two items coming up: EPC renewal and smoke & CO alarm evidence. About 10 minutes each.",
+      cta: "Plan renewal",
+      tone: "warning",
     },
     tenant: {
       initials: "JO",
       name: "James Okafor",
       rating: 4.7,
       since: "March 2025",
+      avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face",
     },
     activity: [
       { title: "Rent paid · £1,800", date: "3 Apr" },
@@ -100,9 +104,10 @@ const DATA_BY_ID: Record<string, OverviewData> = {
     ],
     upcoming: [
       {
-        label: "Overdue",
+        label: "Due soon",
         items: [
-          { title: "EPC Certificate", sub: "Expired 3 days ago", right: "Overdue", overdue: true },
+          { title: "EPC Certificate", sub: "Expires in 28 days", right: "28 days" },
+          { title: "Smoke & CO alarm check", sub: "Evidence needed · legal requirement", right: "Schedule" },
         ],
       },
       {
@@ -120,29 +125,35 @@ const DATA_BY_ID: Record<string, OverviewData> = {
     reviewCount: 3,
     rent: 1450,
     hero: {
-      headline: "All compliant — Gas safety renews in 81 days",
-      subline: "Nothing urgent. We'll remind you 30 days before the deadline.",
-      cta: "View tasks",
+      headline: "Upload the tenancy agreement to start the move-in",
+      subline: "Everything else — deposit registration, EPC, gas safety — unlocks the moment the AST is filed. About 2 minutes.",
+      cta: "Upload now",
+      tone: "warning",
     },
     tenant: {
       initials: "SM",
       name: "Sarah Mitchell",
       rating: 4.9,
       since: "February 2026",
+      avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop&crop=face",
     },
     activity: [
-      { title: "Rent paid · £1,450", date: "1 Apr" },
-      { title: "Tenancy agreement signed", date: "1 Feb" },
-      { title: "Deposit protected · £2,175", date: "28 Jan" },
-      { title: "Move-in inventory completed", date: "1 Feb" },
+      { title: "Deposit received · £1,450", date: "28 Jan" },
       { title: "Tenant verified", date: "20 Jan" },
+      { title: "Sarah's application accepted", date: "18 Jan" },
     ],
     upcoming: [
       {
-        label: "This year",
+        label: "Blocking move-in",
         items: [
-          { title: "Gas Safety Certificate", sub: "Annual inspection", right: "81 days" },
-          { title: "EICR Report", sub: "Electrical safety", right: "210 days" },
+          { title: "Tenancy Agreement (AST)", sub: "Required before any other pre-move-in task", right: "Required", overdue: true },
+        ],
+      },
+      {
+        label: "Once the AST is filed",
+        items: [
+          { title: "Register deposit with TDP scheme", sub: "Within 30 days of receipt", right: "30 days" },
+          { title: "Upload EPC, Gas Safety, EICR", sub: "All required before move-in", right: "Pending" },
         ],
       },
     ],
@@ -154,15 +165,14 @@ const DATA_BY_ID: Record<string, OverviewData> = {
     rent: 1870,
     isHmo: true,
     hero: {
-      headline: "AST renewal window opens in 95 days",
-      subline: "Three tenants, three contracts. We'll surface each one as their renewal approaches.",
-      cta: "Plan renewals",
-      tone: "neutral",
+      headline: "Gas Safety Certificate renewal overdue",
+      subline: "Legal requirement. Upload the latest certificate to stay compliant — about 5 minutes.",
+      cta: "Review",
     },
     hmoTenants: [
-      { initials: "MC", name: "Mia Chen",      rent: 650, since: "Jan 2026", status: "Paid",     avatarBg: "#E1ECF7", avatarFg: "#2E5A8C", stage: "Active tenancy" },
-      { initials: "KA", name: "Kwame Asante",  rent: 620, since: "Feb 2026", status: "Paid",     avatarBg: "#EAF3DE", avatarFg: "#3B6D11", stage: "Active tenancy" },
-      { initials: "SR", name: "Sofia Rossi",   rent: 600, since: "Mar 2026", status: "Due soon", avatarBg: "#F7E8DD", avatarFg: "#8C4A1F", stage: "Active tenancy", alert: { text: "Rent due in 3 days · gentle reminder suggested", severity: "warn" } },
+      { initials: "MC", name: "Mia Chen",      rent: 650, since: "Jan 2026", status: "Paid",     avatarBg: "#E1ECF7", avatarFg: "#2E5A8C", avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face", stage: "Active tenancy" },
+      { initials: "KA", name: "Kwame Asante",  rent: 620, since: "Feb 2026", status: "Paid",     avatarBg: "#EAF3DE", avatarFg: "#3B6D11", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face", stage: "Active tenancy" },
+      { initials: "SR", name: "Sofia Rossi",   rent: 600, since: "Mar 2026", status: "Due soon", avatarBg: "#F7E8DD", avatarFg: "#8C4A1F", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face", stage: "Active tenancy", alert: { text: "Rent due in 3 days · gentle reminder suggested", severity: "warn" } },
     ],
     activity: [
       { title: "Rent paid · £650 (Mia)", date: "1 Apr" },
@@ -173,11 +183,16 @@ const DATA_BY_ID: Record<string, OverviewData> = {
     ],
     upcoming: [
       {
+        label: "Overdue",
+        items: [
+          { title: "Gas Safety Certificate", sub: "Annual inspection · 4 days overdue", right: "Overdue", overdue: true },
+        ],
+      },
+      {
         label: "This year",
         items: [
-          { title: "AST renewal — Mia Chen", sub: "Lease ends 31 Dec 2026", right: "95 days" },
+          { title: "AST renewal — Mia Chen", sub: "Lease ends 31 Dec 2026", right: "50 days" },
           { title: "Deposit Protection — Kwame", sub: "Re-protection window", right: "130 days" },
-          { title: "Gas Safety Certificate", sub: "Annual inspection", right: "248 days" },
         ],
       },
     ],
@@ -192,8 +207,71 @@ export function PropertyOverview({
   onFileCommsAttachment, onAddReview, onBack, initialTab,
 }: PropertyOverviewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? "Overview");
-  const data = DATA_BY_ID[property.id] ?? DATA_BY_ID.p2;
+  // Tasks-tab stage lives on the shell so Prev/Next selections persist
+  // when the landlord switches tabs and comes back.
+  const [taskStage, setTaskStage] = useState<StageName>(() => naturalStage(property));
+  const baseData = DATA_BY_ID[property.id] ?? DATA_BY_ID.p2;
   const name = property.address.split(",")[0];
+
+  // A "Just now" timestamp means the landlord just re-uploaded the cert.
+  // For p3 (which now carries the expired gas safety), treat that as the
+  // renewal and flip the hero + upcoming to a clean state.
+  const vault = allVaults[property.id] ?? [];
+  const gasSafetyRenewed =
+    property.id === "p3" &&
+    vault.some(
+      (d) =>
+        d.name === "Gas Safety Certificate" &&
+        d.status === "uploaded" &&
+        d.timestamp === "Just now",
+    );
+
+  // For p1, the property opens with no tenancy agreement on file. Once the
+  // landlord uploads it via the task (or vault), the banner disappears and
+  // the hero relaxes into a post-upload "nice work" state until the next
+  // real blocker surfaces.
+  const contractFiled = vault.some(
+    (d) => d.name === "Tenancy Agreement (AST)" && d.status === "uploaded",
+  );
+  const contractJustFiled = vault.some(
+    (d) =>
+      d.name === "Tenancy Agreement (AST)" &&
+      d.status === "uploaded" &&
+      d.timestamp === "Just now",
+  );
+  const showContractBanner = property.id === "p1" && !contractFiled;
+
+  const data: OverviewData =
+    gasSafetyRenewed
+      ? {
+          ...baseData,
+          hero: {
+            headline: "All compliant — Gas Safety Certificate renewed",
+            subline: "Nice work. We'll nudge you before the next one's due.",
+            cta: "View tasks",
+            tone: "neutral",
+          },
+          upcoming: [
+            {
+              label: "This year",
+              items: [
+                { title: "AST renewal — Mia Chen", sub: "Lease ends 31 Dec 2026", right: "50 days" },
+                { title: "Deposit Protection — Kwame", sub: "Re-protection window", right: "130 days" },
+              ],
+            },
+          ],
+        }
+      : property.id === "p1" && contractJustFiled
+        ? {
+            ...baseData,
+            hero: {
+              headline: "Tenancy agreement filed — key facts extracted",
+              subline: `${baseData.tenant?.name ?? "Your tenant"} is now set up. Deposit registration and safety docs are unlocked.`,
+              cta: "Continue setup",
+              tone: "neutral",
+            },
+          }
+        : baseData;
 
   // Live derived state from the store
   const currentPhase: LifecyclePhase = getLifecyclePhase(property, completed, allVaults);
@@ -278,6 +356,8 @@ export function PropertyOverview({
           allVaults={allVaults}
           taskUploads={taskUploads}
           extractedFacts={extractedFacts}
+          stage={taskStage}
+          onStageChange={setTaskStage}
           onUploadDoc={onUploadDoc}
           onMarkTaskDone={onMarkTaskDone}
           onUnmarkTaskDone={onUnmarkTaskDone}
@@ -291,20 +371,89 @@ export function PropertyOverview({
           onUploadDocDirect={onUploadDocDirect}
         />
       ) : activeTab === "Comms" ? (
-        <CommsTab property={property} onFileCommsAttachment={onFileCommsAttachment} />
+        <CommsTab property={property} onFileCommsAttachment={onFileCommsAttachment} role="landlord" />
       ) : activeTab === "Payments" ? (
         <PaymentsTab property={property} />
       ) : activeTab === "Reviews" ? (
-        <ReviewsTab property={property} reviews={reviews} onAddReview={onAddReview} />
+        <ReviewsTab property={property} reviews={reviews} onAddReview={onAddReview} role="landlord" propertyScopeId={property.id} />
       ) : (
         <>
-          {/* Hero action card */}
+          {/* Tenancy-agreement banner — renders whenever the AST hasn't
+              been filed yet. Gates the rest of the pre-move-in work by
+              driving the landlord straight into the upload task. */}
+          {showContractBanner && (() => {
+            const BANNER_BG = "#FBF3DE";
+            const BANNER_HEAD = "#6B4A12";
+            const BANNER_SUB = "#8C6A1F";
+            const BANNER_CTA = "#6B4A12";
+            return (
+              <div
+                className="rounded-xl flex items-center justify-between gap-4"
+                style={{ backgroundColor: BANNER_BG, padding: "1rem 1.25rem" }}
+              >
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium" style={{ color: BANNER_HEAD }}>
+                    You haven't uploaded the tenancy agreement
+                  </p>
+                  <p className="text-[13px] mt-1" style={{ color: BANNER_SUB }}>
+                    Upload now to unlock the pre-move-in tasks — HomeBound extracts the key dates so deposit, EPC and gas safety all anchor correctly.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab("Tasks")}
+                  className="shrink-0 text-[13px] font-medium text-white"
+                  style={{ backgroundColor: BANNER_CTA, borderRadius: "8px", padding: "8px 16px" }}
+                >
+                  Upload now
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* Missed-payment nudge — sits above the hero so it's the first
+              thing the landlord sees. Only renders when PAYMENTS_BY_PROP
+              records at least one missed month for this property. */}
           {(() => {
-            const neutral = data.hero.tone === "neutral";
-            const bg = neutral ? "#F2F4F0" : RED_BG;
-            const headColor = neutral ? "#1F5A3A" : RED_DARK;
-            const subColor = neutral ? "#3A7355" : RED_MID;
-            const btnBg = neutral ? "#1F5A3A" : RED_DARK;
+            const missed = (PAYMENTS_BY_PROP[property.id] || []).filter(pm => pm.status === "missed");
+            if (missed.length === 0) return null;
+            const label = missed.length === 1
+              ? `Missed payment — ${missed[0].date}`
+              : `${missed.length} missed payments`;
+            const sub = "No rent received for this period. Send a nudge to open a conversation with the tenant.";
+            return (
+              <div
+                className="rounded-xl flex items-center justify-between gap-4"
+                style={{ backgroundColor: RED_BG, padding: "1rem 1.25rem" }}
+              >
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium" style={{ color: RED_DARK }}>
+                    {label}
+                  </p>
+                  <p className="text-[13px] mt-1" style={{ color: RED_MID }}>
+                    {sub}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab("Comms")}
+                  className="shrink-0 text-[13px] font-medium text-white"
+                  style={{ backgroundColor: RED_DARK, borderRadius: "8px", padding: "8px 16px" }}
+                >
+                  Send nudge
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* Hero action card — suppressed when the tenancy-agreement
+              banner is active, since both would be saying the same thing. */}
+          {!showContractBanner && (() => {
+            const tone = data.hero.tone;
+            const isWarning = tone === "warning";
+            const isNeutral = tone === "neutral";
+            const bg = isWarning ? "#FBF3DE" : isNeutral ? "#F2F4F0" : RED_BG;
+            const headColor = isWarning ? "#6B4A12" : isNeutral ? "#1F5A3A" : RED_DARK;
+            const subColor = isWarning ? "#8C6A1F" : isNeutral ? "#3A7355" : RED_MID;
+            const btnBg = isWarning ? "#6B4A12" : isNeutral ? "#1F5A3A" : RED_DARK;
             return (
               <div
                 className="rounded-xl flex items-center justify-between gap-4"
@@ -319,6 +468,16 @@ export function PropertyOverview({
                   </p>
                 </div>
                 <button
+                  onClick={() => {
+                    // For a danger/warning hero, the CTA sends the landlord
+                    // into the Vault tab so they can upload the missing doc.
+                    // Neutral heroes take them to Tasks for a gentler nudge.
+                    if (tone === "neutral") {
+                      setActiveTab("Tasks");
+                    } else {
+                      setActiveTab("Vault");
+                    }
+                  }}
                   className="shrink-0 text-[13px] font-medium text-white"
                   style={{ backgroundColor: btnBg, borderRadius: "8px", padding: "8px 16px" }}
                 >
@@ -349,7 +508,23 @@ export function PropertyOverview({
             const summary = totalOpen === 0
               ? "All caught up"
               : `${totalOpen} open · ${phaseLabels[currentPhase]} stage`;
-            const nextUp = data.hero.headline;
+            const allCaughtUp = totalOpen === 0;
+
+            // First open task in the currently-active phase. Drives the
+            // "Next up" label and the Mark-done button below.
+            const phaseTasks = (TASK_DATA.landlord[currentPhase] ?? []).filter(
+              (t) => !t.isContractUpload && !t.isContractSign && (!t.hmoOnly || property.isHmo),
+            );
+            const propVault = allVaults[property.id] ?? [];
+            const nextOpenTask = phaseTasks.find((t) => {
+              const docUploaded =
+                !!t.vaultDoc &&
+                propVault.some((d) => d.name === t.vaultDoc && d.status === "uploaded");
+              return !completed[`${property.id}_${t.id}`] && !docUploaded;
+            });
+            const nextUp = allCaughtUp
+              ? "All caught up"
+              : nextOpenTask?.label ?? data.hero.headline;
             return (
               <div className="bg-card hairline rounded-xl" style={{ padding: "1.25rem" }}>
                 <div className="flex items-center justify-between mb-4">
@@ -399,10 +574,35 @@ export function PropertyOverview({
                     <p className="text-[14px] font-medium text-foreground mt-0.5">{nextUp}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button className="text-[13px] text-foreground hairline rounded-lg" style={{ padding: "6px 14px" }}>
-                      Mark done
-                    </button>
-                    <button className="text-[13px] text-muted-foreground hairline rounded-lg" style={{ padding: "6px 10px" }}>
+                    {!allCaughtUp && nextOpenTask && (
+                      <button
+                        onClick={() => {
+                          onMarkTaskDone(property.id, nextOpenTask.id, nextOpenTask.label);
+                        }}
+                        className="text-[13px] text-foreground hairline rounded-lg"
+                        style={{ padding: "6px 14px" }}
+                      >
+                        Mark done
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        // Jump to the Tasks tab. If we can map the current
+                        // lifecycle phase to a Tasks-tab stage, open that
+                        // stage directly so the landlord lands on the right
+                        // list.
+                        const phaseToStage: Record<LifecyclePhase, StageName> = {
+                          "Pre-Move-In": "Pre-move-in",
+                          "Move-In": "Move-in",
+                          "During Tenancy": "Active tenancy",
+                          "Move-Out": "Move-out",
+                        };
+                        setTaskStage(phaseToStage[currentPhase]);
+                        setActiveTab("Tasks");
+                      }}
+                      className="text-[13px] text-muted-foreground hairline rounded-lg"
+                      style={{ padding: "6px 10px" }}
+                    >
                       See all tasks →
                     </button>
                   </div>
@@ -443,16 +643,25 @@ export function PropertyOverview({
                       style={{ padding: "14px 16px", gap: "12px" }}
                     >
                       <div className="flex items-center gap-3">
-                        <div
-                          className="rounded-full flex items-center justify-center shrink-0"
-                          style={{
-                            width: "40px", height: "40px",
-                            backgroundColor: t.avatarBg, color: t.avatarFg,
-                            fontSize: "13px", fontWeight: 500,
-                          }}
-                        >
-                          {t.initials}
-                        </div>
+                        {t.avatarUrl ? (
+                          <img
+                            src={t.avatarUrl}
+                            alt={t.name}
+                            className="rounded-full object-cover shrink-0"
+                            style={{ width: "40px", height: "40px" }}
+                          />
+                        ) : (
+                          <div
+                            className="rounded-full flex items-center justify-center shrink-0"
+                            style={{
+                              width: "40px", height: "40px",
+                              backgroundColor: t.avatarBg, color: t.avatarFg,
+                              fontSize: "13px", fontWeight: 500,
+                            }}
+                          >
+                            {t.initials}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="text-[14px] font-medium text-foreground truncate">{t.name}</p>
                           <p className="text-[12px] text-muted-foreground mt-0.5 tabular-nums">
@@ -533,16 +742,25 @@ export function PropertyOverview({
 
                 <div className="bg-card hairline rounded-xl" style={{ padding: "14px 16px" }}>
                   <div className="flex items-center" style={{ gap: "12px", marginBottom: "12px" }}>
-                    <div
-                      className="rounded-full flex items-center justify-center shrink-0"
-                      style={{
-                        width: "44px", height: "44px",
-                        backgroundColor: "#E1ECF7", color: "#2E5A8C",
-                        fontSize: "14px", fontWeight: 500,
-                      }}
-                    >
-                      {data.tenant.initials}
-                    </div>
+                    {data.tenant.avatarUrl ? (
+                      <img
+                        src={data.tenant.avatarUrl}
+                        alt={data.tenant.name}
+                        className="rounded-full object-cover shrink-0"
+                        style={{ width: "44px", height: "44px" }}
+                      />
+                    ) : (
+                      <div
+                        className="rounded-full flex items-center justify-center shrink-0"
+                        style={{
+                          width: "44px", height: "44px",
+                          backgroundColor: "#E1ECF7", color: "#2E5A8C",
+                          fontSize: "14px", fontWeight: 500,
+                        }}
+                      >
+                        {data.tenant.initials}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[14px] font-medium text-foreground">

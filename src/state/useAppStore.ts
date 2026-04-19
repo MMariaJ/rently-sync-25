@@ -16,11 +16,22 @@ import {
 } from "@/data/constants";
 import { extractFactsFor, type ExtractedFacts } from "./engines";
 
-const P1_VAULT_INIT: VaultDoc[] = VAULT_INIT.map(d =>
-  d.name === "Tenancy Agreement (AST)"
-    ? { ...d, status: "uploaded" as const, timestamp: "01 Feb 2026" }
-    : d
-);
+// P1 is very early in onboarding — the Deposit Protection Certificate is the
+// only freshly-collected doc. Gas Safety is pre-seeded as uploaded but stale
+// (expired) so the renewal flow and AI fact extraction on re-upload still
+// demo end-to-end; everything else stays pending.
+const P1_VAULT_INIT: VaultDoc[] = VAULT_INIT.map(d => {
+  if (d.name === "Deposit Protection Certificate") {
+    return { ...d, status: "uploaded" as const, timestamp: "01 Feb 2026" };
+  }
+  if (d.name === "Gas Safety Certificate") {
+    return { ...d, status: "uploaded" as const, timestamp: "15 Apr 2025" };
+  }
+  if (d.name === "How to Rent Guide") {
+    return { ...d, status: "uploaded" as const, timestamp: "12 Jan 2026" };
+  }
+  return d;
+});
 
 const P2_VAULT_INIT: VaultDoc[] = VAULT_INIT.map(d =>
   d.name === "EPC Certificate" ? { ...d, status: "pending" as const } :
@@ -34,7 +45,7 @@ const P2_VAULT_INIT: VaultDoc[] = VAULT_INIT.map(d =>
 const P3_VAULT_INIT: VaultDoc[] = VAULT_INIT.map(d =>
   ["Tenancy Agreement (AST)", "Gas Safety Certificate", "EPC Certificate",
    "EICR Report", "How to Rent Guide", "Deposit Protection Certificate",
-   "Move-In Inventory"].includes(d.name)
+   "Move-In Inventory", "HMO Licence"].includes(d.name)
     ? { ...d, status: "uploaded" as const, timestamp: "01 Jan 2026" }
     : d
 );
@@ -44,7 +55,7 @@ export interface ActivityEvent {
   propId: string;
   title: string;
   date: string; // human, e.g. "Today" or "3 Apr"
-  source: "task" | "vault" | "comms" | "system" | "review";
+  source: "task" | "vault" | "comms" | "system" | "review" | "nudge";
 }
 
 export interface Reminder {
@@ -54,17 +65,13 @@ export interface Reminder {
   fireInDays: number;
 }
 
-export interface ReviewEntry {
-  id: string;
-  propId: string;
-  author: string;
-  avatar?: string;
-  rating: number;
-  date: string; // human
-  text: string;
-  role: "landlord" | "tenant";
-  createdAt: number;
-}
+// Runtime-added reviews use the shared Review shape. Re-exported under the
+// legacy ReviewEntry name so callers don't have to churn.
+import type {
+  Review, TenantDimensions, LandlordDimensions, UserRole,
+} from "@/data/constants";
+
+export type ReviewEntry = Review;
 
 export interface AppState {
   vaults: Record<string, VaultDoc[]>;
@@ -100,14 +107,28 @@ export interface AppActions {
     filename: string;
     sender: string;
   }) => void;
-  // Add a review (landlord→tenant or tenant→landlord).
+  // Add a review (landlord→tenant or tenant→landlord). Caller supplies
+  // authorship + subject + direction-specific per-dimension scores; the
+  // store stamps id/createdAt/dateLabel.
   addReview: (args: {
-    propId: string;
-    author: string;
-    avatar?: string;
-    role: "landlord" | "tenant";
+    authorId: string;
+    authorRole: UserRole;
+    subjectId: string;
+    subjectRole: UserRole;
+    propertyId: string;
+    tenancyId: string;
     rating: number;
-    text: string;
+    body: string;
+    tenantDimensions?: TenantDimensions;
+    landlordDimensions?: LandlordDimensions;
+  }) => void;
+  // Tenant-initiated nudge about an overdue landlord obligation. `formal`
+  // marks it as a "raise formally" rather than a casual reminder — both
+  // flow through the same activity-event stream for now.
+  nudgeLandlord: (args: {
+    propId: string;
+    docName: string;
+    formal?: boolean;
   }) => void;
 }
 
@@ -260,20 +281,40 @@ export function useAppStore(): AppState & AppActions {
     [fileIntoVault, pushEvent],
   );
 
+  const nudgeLandlord = useCallback<AppActions["nudgeLandlord"]>(
+    ({ propId, docName, formal }) => {
+      pushEvent({
+        propId,
+        title: formal
+          ? `Formal request sent · ${docName} overdue`
+          : `Nudge sent · ${docName} overdue`,
+        source: "nudge",
+      });
+    },
+    [pushEvent],
+  );
+
   const addReview = useCallback<AppActions["addReview"]>(
-    ({ propId, author, avatar, role, rating, text }) => {
+    ({
+      authorId, authorRole, subjectId, subjectRole,
+      propertyId, tenancyId, rating, body,
+      tenantDimensions, landlordDimensions,
+    }) => {
+      const now = Date.now();
       setReviews(prev => [
         {
-          id: `rev-${Date.now()}`,
-          propId, author, avatar, role, rating, text,
-          date: todayLong(),
-          createdAt: Date.now(),
+          id: `rev-${now}`,
+          authorId, authorRole, subjectId, subjectRole,
+          propertyId, tenancyId, rating, body,
+          tenantDimensions, landlordDimensions,
+          createdAt: now,
+          dateLabel: todayLong(),
         },
         ...prev,
       ]);
       pushEvent({
-        propId,
-        title: `${role === "landlord" ? "You reviewed your tenant" : "New tenant review"} · ${rating.toFixed(1)} ★`,
+        propId: propertyId,
+        title: `${authorRole === "landlord" ? "You reviewed your tenant" : "You reviewed your landlord"} · ${rating.toFixed(1)} ★`,
         source: "review",
       });
     },
@@ -283,6 +324,6 @@ export function useAppStore(): AppState & AppActions {
   return {
     vaults, completed, taskUploads, reminders, extractedFacts, events, reviews,
     uploadDoc, uploadDocDirect, markTaskDone, unmarkTaskDone, setReminder,
-    fileCommsAttachment, addReview,
+    fileCommsAttachment, addReview, nudgeLandlord,
   };
 }

@@ -6,7 +6,7 @@ import { StarRating } from "./StarRating";
 import {
   TENANT_INFO, HMO_TENANTS, PROP_PHOTOS,
   PROP_RATINGS, PAYMENTS_BY_PROP,
-  VAULT_INIT, TASK_DATA, PHASES,
+  VAULT_INIT, TASK_DATA, PHASES, TENANCY_INFO,
   type Property, type VaultDoc,
 } from "@/data/constants";
 import { getPropertyAlerts, getComplianceForProperty } from "@/data/helpers";
@@ -74,11 +74,17 @@ function PropertyCard({
   const vault = allVaults[p.id] || VAULT_INIT;
   const isDocUp = (n: string) => vault.some(d => d.name === n && d.status === "uploaded");
   const isDone = (t: any) => completed[`${p.id}_${t.id}`] || (t.vaultDoc && isDocUp(t.vaultDoc));
+  // The stage label reflects where the tenancy actually is (declared on
+  // TENANCY_INFO), not the first phase that happens to have an outstanding
+  // task — leftover Pre-Move-In items don't mean a mid-tenancy let is still
+  // pre-move-in. Fall back to the task-walk heuristic for properties with
+  // no declared phase (e.g. vacant units).
+  const declaredPhase = TENANCY_INFO[p.id]?.currentPhase;
   const curPhaseIdx = PHASES.findIndex(ph => {
     const tasks = (TASK_DATA["landlord"][ph] || []).filter((t: any) => !t.isContractUpload && !t.isContractSign && (!t.hmoOnly || p.isHmo));
     return tasks.length > 0 && tasks.some((t: any) => !isDone(t));
   });
-  const curPhaseName = curPhaseIdx >= 0 ? PHASES[curPhaseIdx] : PHASES[PHASES.length - 1];
+  const curPhaseName = declaredPhase ?? (curPhaseIdx >= 0 ? PHASES[curPhaseIdx] : PHASES[PHASES.length - 1]);
 
   return (
     <button

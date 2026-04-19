@@ -5,7 +5,6 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, AlertTriangle } from "lucide-react";
 import {
   PORTFOLIO, TENANT_INFO, PROP_CONTRACT, HMO_TENANTS, VAULT_INIT,
   type Property, type VaultDoc,
@@ -14,6 +13,7 @@ import {
   TASK_LIBRARY, type TaskCtx, type TaskCategory, type TaskAction,
 } from "@/data/taskLibrary";
 import type { ExtractedFacts } from "@/state/engines";
+import { InventoryChecklistModal } from "./InventoryChecklistModal";
 
 const PURPLE = "#534AB7";
 const PURPLE_TINT = "#F7F5FD";
@@ -24,12 +24,32 @@ const RED_MID = "#A32D2D";
 const RED_BORDER = "#F7C1C1";
 const RED_BG = "#FDF6F5";
 
+// Tasks that gate the entire stage — when open, they always outrank any
+// date-driven task in the urgency ranking. l0 (Upload Tenancy Agreement)
+// is the only gate today, but the set makes it easy to add more later.
+const GATING_TASK_IDS = new Set(["l0"]);
+
+// === Lifecycle stages =======================================================
+
+export type StageName = "Pre-move-in" | "Move-in" | "Active tenancy" | "Move-out";
+const STAGE_ORDER: StageName[] = ["Pre-move-in", "Move-in", "Active tenancy", "Move-out"];
+
+// The stage we treat as the property's "natural" current stage when no
+// override is set. p1 starts in Pre-move-in; p2/p3 are mid-tenancy.
+export function naturalStage(p: Property): StageName {
+  return p.id === "p1" ? "Pre-move-in" : "Active tenancy";
+}
+
 interface LifecycleTasksTabProps {
   property: Property;
   completed: Record<string, boolean>;
   allVaults: Record<string, VaultDoc[]>;
   taskUploads: Record<string, string>;
   extractedFacts?: Record<string, ExtractedFacts>;
+  // Controlled stage — owned by the parent (PropertyOverview) so Prev/Next
+  // selections persist when the user switches away and returns to Tasks.
+  stage: StageName;
+  onStageChange: (stage: StageName) => void;
   onUploadDoc: (args: { propId: string; taskId: string; vaultDoc: string; filename?: string }) => void;
   onMarkTaskDone: (propId: string, taskId: string, taskTitle: string) => void;
   onUnmarkTaskDone: (propId: string, taskId: string) => void;
@@ -57,32 +77,30 @@ const CATEGORY_ORDER: TaskCategory[] = [
   "recommended",
 ];
 
-// === Lifecycle stages =======================================================
-
-type StageName = "Pre-move-in" | "Move-in" | "Active tenancy" | "Move-out";
-const STAGE_ORDER: StageName[] = ["Pre-move-in", "Move-in", "Active tenancy", "Move-out"];
-
 // Per-property tasks broken down by stage. Stages without tasks render an empty
 // state but are still navigable so the landlord can preview what's coming.
 function tasksForStage(p: Property, stage: StageName): string[] {
   if (p.id === "p1") {
-    if (stage === "Pre-move-in") return ["l1", "l5", "l2", "l3", "l4", "l6", "l7"];
+    // l0 (Upload Tenancy Agreement) gates the other pre-move-in work and
+    // sits first in the list. Once the AST lands in the Vault it renders as
+    // done via the standard upload-action → vault check.
+    if (stage === "Pre-move-in") return ["l0", "l1", "l5", "l2", "l3", "l4", "l6", "l7"];
+    if (stage === "Move-in") return ["l9", "l8", "l10"];
     if (stage === "Active tenancy") return ["l13", "l22"];
+    if (stage === "Move-out") return ["l16", "l17", "l18", "l19"];
     return [];
   }
   if (p.id === "p2") {
+    if (stage === "Move-in") return ["l9", "l8", "l10"];
     if (stage === "Active tenancy") return ["l22", "l13", "l12", "l15"];
+    if (stage === "Move-out") return ["l16", "l17", "l18", "l19"];
     return [];
   }
   // p3 — HMO
+  if (stage === "Move-in") return ["l9", "l8", "l10"];
   if (stage === "Active tenancy") return ["l_hmo1", "l13", "l22", "l12", "l15"];
+  if (stage === "Move-out") return ["l16", "l17", "l18", "l19"];
   return [];
-}
-
-// The stage we treat as the property's "natural" current stage when no
-// override is set. p1 starts in Pre-move-in; p2/p3 are mid-tenancy.
-function naturalStage(p: Property): StageName {
-  return p.id === "p1" ? "Pre-move-in" : "Active tenancy";
 }
 
 // Build the context object from property + tenant data
@@ -112,14 +130,13 @@ function buildCtx(p: Property): TaskCtx {
 
 export function LifecycleTasksTab({
   property, completed, taskUploads, allVaults, extractedFacts,
+  stage, onStageChange,
   onUploadDoc, onMarkTaskDone, onUnmarkTaskDone, onSetReminder,
 }: LifecycleTasksTabProps) {
   const ctx = useMemo(() => buildCtx(property), [property]);
   const vault = allVaults[property.id] || VAULT_INIT;
 
-  // The currently viewed stage. Defaults to the property's natural stage,
-  // but the user can advance with "Next stage →" once everything is done.
-  const [stage, setStage] = useState<StageName>(naturalStage(property));
+  // Stage is owned by the parent so Prev/Next survives tab switches.
   const stageIdx = STAGE_ORDER.indexOf(stage);
 
   const taskIds = tasksForStage(property, stage);
@@ -134,21 +151,36 @@ export function LifecycleTasksTab({
       const days = lib.daysRemaining(ctx);
       const isCompleted = completed[`${property.id}_${id}`] ?? false;
       const hasUpload = !!taskUploads[`${property.id}_${id}`];
+      // Tie upload tasks to vault state: if the linked doc has been filed
+      // (from any surface — vault, comms, tasks), treat the task as done.
+      // This keeps Tasks and Vault consistent.
+      const uploadAction = lib.actions.find((a) => a.kind === "upload");
+      const linkedVaultDoc =
+        uploadAction?.kind === "upload" ? uploadAction.vaultDoc : undefined;
+      const docFiled =
+        !!linkedVaultDoc &&
+        vault.some((d) => d.name === linkedVaultDoc && d.status === "uploaded");
       return {
         id,
         title: titleFor(id),
         category: lib.category,
         daysRemaining: days,
-        done: isCompleted || hasUpload,
-        hasDoc: lib.actions.some((a) => a.kind === "upload"),
+        done: isCompleted || hasUpload || docFiled,
+        hasDoc: !!uploadAction,
       };
     });
-  }, [taskIds, ctx, completed, taskUploads, property.id]);
+  }, [taskIds, ctx, completed, taskUploads, property.id, vault]);
 
-  // Most urgent: smallest positive days, or any overdue
+  // Most urgent: smallest positive days, or any overdue.
+  // Exception: gating tasks (l0 — Upload Tenancy Agreement) always win
+  // when open, because nothing else can be completed until the contract
+  // is filed. Without this, a date-driven task like "How to Rent" would
+  // steal the top slot despite being unblockable without the AST.
   const mostUrgent = useMemo(() => {
     const open = resolved.filter((t) => !t.done);
     if (open.length === 0) return null;
+    const gate = open.find((t) => GATING_TASK_IDS.has(t.id));
+    if (gate) return gate;
     const overdue = open.filter((t) => t.daysRemaining !== null && t.daysRemaining < 0);
     if (overdue.length > 0) {
       return overdue.sort((a, b) => (a.daysRemaining! - b.daysRemaining!))[0];
@@ -238,16 +270,17 @@ export function LifecycleTasksTab({
 
   const goNextStage = () => {
     if (stageIdx < STAGE_ORDER.length - 1) {
-      setStage(STAGE_ORDER[stageIdx + 1]);
+      const next = STAGE_ORDER[stageIdx + 1];
+      onStageChange(next);
       setSelectedId(null);
       setPendingInventory(null);
-      toast.success(`Moved to ${STAGE_ORDER[stageIdx + 1]}`);
+      toast.success(`Moved to ${next}`);
     }
   };
 
   const goPrevStage = () => {
     if (stageIdx > 0) {
-      setStage(STAGE_ORDER[stageIdx - 1]);
+      onStageChange(STAGE_ORDER[stageIdx - 1]);
       setSelectedId(null);
       setPendingInventory(null);
     }
@@ -355,30 +388,10 @@ export function LifecycleTasksTab({
               marginBottom: "10px",
             }}
           >
-            {pendingInventory ? "Confirm inventory" : "Task detail"}
+            Task detail
           </h2>
 
-          {pendingInventory ? (
-            <InlineInventoryChecklist
-              filename={pendingInventory.filename}
-              propertyAddress={property.address}
-              onCancel={() => setPendingInventory(null)}
-              onConfirm={({ confirmed, total, issues }) => {
-                const { taskId, filename } = pendingInventory;
-                onUploadDoc({ propId: property.id, taskId, vaultDoc: "Move-In Inventory", filename });
-                setPendingInventory(null);
-                if (issues.length > 0) {
-                  toast.warning(`Filed with ${issues.length} flagged ${issues.length === 1 ? "item" : "items"}`, {
-                    description: `${confirmed}/${total} confirmed · issues logged to evidence trail.`,
-                  });
-                } else {
-                  toast.success("Inventory confirmed & filed", {
-                    description: `${confirmed}/${total} items confirmed · ✦ extracted to Vault.`,
-                  });
-                }
-              }}
-            />
-          ) : effectiveSelected && TASK_LIBRARY[effectiveSelected] ? (
+          {effectiveSelected && TASK_LIBRARY[effectiveSelected] ? (
             <TaskDetailPanel
               taskId={effectiveSelected}
               ctx={ctx}
@@ -398,6 +411,29 @@ export function LifecycleTasksTab({
           )}
         </section>
       </div>
+
+      {pendingInventory && (
+        <InventoryChecklistModal
+          role="landlord"
+          propertyAddress={property.address}
+          filename={pendingInventory.filename}
+          onClose={() => setPendingInventory(null)}
+          onConfirm={({ confirmed, total, issues }) => {
+            const { taskId, filename } = pendingInventory;
+            onUploadDoc({ propId: property.id, taskId, vaultDoc: "Move-In Inventory", filename });
+            setPendingInventory(null);
+            if (issues.length > 0) {
+              toast.warning(`Filed with ${issues.length} ${issues.length === 1 ? "amendment" : "amendments"}`, {
+                description: `${confirmed}/${total} confirmed · amendments logged to evidence trail.`,
+              });
+            } else {
+              toast.success("Inventory confirmed & filed", {
+                description: `${confirmed}/${total} items confirmed · ✦ extracted to Vault.`,
+              });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -418,15 +454,17 @@ function LifecycleTracker({
   onNext: () => void;
 }) {
   // Build per-stage display from the task selection so the dots reflect the
-  // actual lifecycle, not a hardcoded preset.
+  // actual lifecycle. Only the current stage shows an open-task count —
+  // other stages keep their label-only so the landlord isn't distracted by
+  // work they can't action yet.
   const stages = STAGE_ORDER.map((s) => {
     const ids = tasksForStage(property, s);
     const isCurrent = s === stage;
-    const count = ids.length === 0
-      ? "—"
-      : isCurrent
-        ? `${totalCount - doneCount} open`
-        : `${ids.length} task${ids.length === 1 ? "" : "s"}`;
+    const count = isCurrent
+      ? ids.length === 0
+        ? "—"
+        : `${totalCount - doneCount} open`
+      : "";
     return { name: s, count, active: isCurrent };
   });
 
@@ -898,149 +936,8 @@ function ActionStack({
   );
 }
 
-// === Inline inventory checklist =============================================
-// Renders in the right-hand detail column (not a modal) so it lives in the
-// same surface as the task detail. Same item structure as the old modal —
-// landlord ticks each room item OK or flags an issue, then files the doc.
-
-const INVENTORY_ROOMS: { room: string; items: string[] }[] = [
-  { room: "Kitchen", items: ["Oven & hob", "Fridge / freezer", "Dishwasher", "Cupboards & worktops", "Flooring"] },
-  { room: "Living room", items: ["Sofa", "Carpet / flooring", "Curtains / blinds", "Light fittings"] },
-  { room: "Bedroom", items: ["Bed frame", "Mattress", "Wardrobe", "Carpet / flooring"] },
-  { room: "Bathroom", items: ["Bath / shower", "Toilet", "Sink & taps", "Tiles & sealant"] },
-  { room: "Hallway & exterior", items: ["Front door & locks", "Smoke alarm", "CO alarm", "Meter cupboard"] },
-];
-
-function InlineInventoryChecklist({
-  filename, propertyAddress, onCancel, onConfirm,
-}: {
-  filename: string;
-  propertyAddress: string;
-  onCancel: () => void;
-  onConfirm: (s: { confirmed: number; total: number; issues: string[] }) => void;
-}) {
-  type ItemState = "ok" | "issue" | null;
-  const all = useMemo(
-    () => INVENTORY_ROOMS.flatMap((r) => r.items.map((i) => `${r.room}: ${i}`)),
-    [],
-  );
-  const [state, setState] = useState<Record<string, ItemState>>({});
-
-  const counts = useMemo(() => {
-    let ok = 0, issue = 0;
-    for (const k of all) {
-      if (state[k] === "ok") ok++;
-      if (state[k] === "issue") issue++;
-    }
-    return { ok, issue, total: all.length };
-  }, [state, all]);
-
-  const allReviewed = counts.ok + counts.issue === counts.total;
-
-  const setAllOk = () => {
-    const next: Record<string, ItemState> = {};
-    for (const k of all) next[k] = "ok";
-    setState(next);
-  };
-
-  const handleConfirm = () => {
-    const issues = all.filter((k) => state[k] === "issue");
-    onConfirm({ confirmed: counts.ok, total: counts.total, issues });
-  };
-
-  return (
-    <div className="bg-card hairline rounded-xl flex flex-col" style={{ maxHeight: "calc(100vh - 240px)" }}>
-      <div className="px-4 pt-4 pb-3 hairline-b">
-        <p className="text-[11px] uppercase tracking-wider" style={{ color: PURPLE, fontWeight: 500, letterSpacing: "0.5px" }}>
-          ✦ Confirm inventory
-        </p>
-        <p className="text-[14px] text-foreground font-medium mt-1 truncate">{filename}</p>
-        <p className="text-[12px] text-muted-foreground mt-0.5 truncate">{propertyAddress}</p>
-        <p className="text-[12px] text-muted-foreground mt-2" style={{ lineHeight: 1.5 }}>
-          Tick each item to confirm it's present and in working order, or flag an issue. The signed
-          checklist is filed alongside the inventory as evidence.
-        </p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-3" style={{ minHeight: 0 }}>
-        {INVENTORY_ROOMS.map((room) => (
-          <div key={room.room} className="mb-3">
-            <p
-              className="text-[11px] font-medium text-muted-foreground mb-1.5"
-              style={{ letterSpacing: "0.5px", textTransform: "uppercase" }}
-            >
-              {room.room}
-            </p>
-            <div className="bg-background hairline rounded-lg overflow-hidden">
-              {room.items.map((item, i) => {
-                const key = `${room.room}: ${item}`;
-                const s = state[key];
-                return (
-                  <div
-                    key={key}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 ${i > 0 ? "hairline-t" : ""}`}
-                  >
-                    <span className="flex-1 text-[12px] text-foreground truncate">{item}</span>
-                    <button
-                      onClick={() => setState((p) => ({ ...p, [key]: p[key] === "ok" ? null : "ok" }))}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] transition-colors"
-                      style={{
-                        backgroundColor: s === "ok" ? "#1F5A3A" : "transparent",
-                        color: s === "ok" ? "white" : "hsl(var(--muted-foreground))",
-                        border: s === "ok" ? "none" : "0.5px solid hsl(var(--border))",
-                      }}
-                    >
-                      <Check className="w-3 h-3" /> OK
-                    </button>
-                    <button
-                      onClick={() => setState((p) => ({ ...p, [key]: p[key] === "issue" ? null : "issue" }))}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] transition-colors"
-                      style={{
-                        backgroundColor: s === "issue" ? "#FFFAEE" : "transparent",
-                        color: s === "issue" ? "#854F0B" : "hsl(var(--muted-foreground))",
-                        border: s === "issue" ? "0.5px solid #E5C870" : "0.5px solid hsl(var(--border))",
-                        fontWeight: s === "issue" ? 500 : 400,
-                      }}
-                    >
-                      <AlertTriangle className="w-3 h-3" /> Issue
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="hairline-t px-4 py-3 flex items-center gap-2">
-        <div className="flex-1 text-[11px] text-muted-foreground">
-          {counts.ok} ok · {counts.issue} flagged · {counts.total - counts.ok - counts.issue} to review
-        </div>
-        <button
-          onClick={onCancel}
-          className="px-2.5 py-1.5 rounded-lg text-[12px] hover:bg-secondary text-muted-foreground"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={setAllOk}
-          className="px-2.5 py-1.5 rounded-lg text-[12px] hover:bg-secondary text-muted-foreground"
-          style={{ border: "0.5px solid hsl(var(--border))" }}
-        >
-          Mark all OK
-        </button>
-        <button
-          onClick={handleConfirm}
-          disabled={!allReviewed}
-          className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-white disabled:opacity-40"
-          style={{ backgroundColor: PURPLE }}
-        >
-          Confirm & file
-        </button>
-      </div>
-    </div>
-  );
-}
+// (Legacy InlineInventoryChecklist removed — landlord now uses the shared
+// InventoryChecklistModal with role="landlord".)
 
 // === Helpers ================================================================
 
@@ -1052,6 +949,7 @@ function formatDays(d: number): string {
 
 function titleFor(taskId: string): string {
   const titles: Record<string, string> = {
+    l0: "Upload Tenancy Agreement",
     l1: "Register deposit with TDP scheme",
     l2: "Upload EPC (min. rating E)",
     l3: "Upload Gas Safety Certificate",
@@ -1059,10 +957,17 @@ function titleFor(taskId: string): string {
     l5: "Provide 'How to Rent' guide",
     l6: "Upload property inventory + photos",
     l7: "Set initial meter readings",
+    l8: "Hand over keys (log in app)",
+    l9: "Evidence smoke & CO alarm check",
+    l10: "Countersign move-in inventory",
     l_hmo1: "Upload HMO licence",
     l12: "Respond to repair requests",
     l13: "Renew annual gas safety check",
     l15: "Review & agree rent increase",
+    l16: "Complete check-out inspection",
+    l17: "Upload damage evidence",
+    l18: "Submit itemised deposit deduction",
+    l19: "Return deposit within 10 days",
     l22: "Renew EPC certificate",
   };
   return titles[taskId] ?? taskId;

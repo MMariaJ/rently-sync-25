@@ -50,6 +50,38 @@ const gbp = (n: number) => `£${n.toLocaleString("en-GB")}`;
 export const TASK_LIBRARY: Record<string, TaskLibraryEntry> = {
   // === TIME-BOUND LEGAL ====================================================
 
+  // l0 — Upload Tenancy Agreement. This is the gate: until the AST is filed,
+  // every downstream obligation (deposit protection window, EPC, gas, etc.)
+  // has no anchor date. Uploading here also triggers the mock AI extraction
+  // so the rest of the product picks up tenant, rent and term.
+  // daysRemaining returns -1 so it always sits at the top of the urgency
+  // ranking — l0 is the prerequisite for every other pre-move-in action,
+  // so "most overdue" is the right semantic even when it has no real deadline.
+  l0: {
+    category: "time-bound-legal",
+    subtitle: "Required before any other pre-move-in task",
+    statutory: true,
+    description: (c) =>
+      `Upload the signed Assured Shorthold Tenancy between you and ${c.tenantFirstName}. Once filed, HomeBound extracts the key dates — start, end, rent, deposit — and every downstream task (deposit registration, EPC, gas safety) anchors to them.`,
+    consequence: () =>
+      "Without a filed tenancy agreement there's no legally binding contract on record. The move-in can't proceed and the statutory clocks (30-day deposit registration, Gas Safety, How-to-Rent) have nothing to start from.",
+    steps: [
+      "Sign the AST with the tenant (digital signature or scan of wet signature).",
+      "Upload the PDF here — HomeBound files it in the Vault automatically.",
+      "Key facts (rent, term, notice period) are extracted so the other tasks unlock with real dates.",
+    ],
+    contextRows: (c) => [
+      { label: "Tenant", value: c.tenantName },
+      { label: "Rent", value: `${gbp(c.rent)}/month` },
+      { label: "Start", value: c.contractStart },
+    ],
+    actions: [
+      { kind: "upload", label: "Upload tenancy agreement", vaultDoc: "Tenancy Agreement (AST)" },
+      { kind: "remind", label: "Remind me" },
+    ],
+    daysRemaining: () => null,
+  },
+
   l1: {
     category: "time-bound-legal",
     subtitle: "Statutory · 30 days from receipt",
@@ -265,6 +297,171 @@ export const TASK_LIBRARY: Record<string, TaskLibraryEntry> = {
     daysRemaining: () => null,
   },
 
+  // === MOVE-IN =============================================================
+
+  l8: {
+    category: "recommended",
+    subtitle: "Log date, time, and number of sets",
+    statutory: false,
+    description: (c) =>
+      `Log the key handover on move-in day so there's a timestamped record. Note how many sets ${c.tenantFirstName} received and any access fobs or gate keys.`,
+    steps: [
+      "Meet the tenant at the property on move-in day.",
+      "Hand over keys and any fobs.",
+      "Log the date, time, and number of sets in the app.",
+    ],
+    contextRows: (c) => [
+      { label: "Move-in day", value: c.contractStart },
+      { label: "Tenant", value: c.tenantName },
+    ],
+    actions: [
+      { kind: "mark-done", label: "Log handover" },
+      { kind: "remind", label: "Remind me" },
+    ],
+    daysRemaining: (c) => daysUntil(c.contractStart),
+  },
+
+  l9: {
+    category: "required-legal",
+    subtitle: "Test smoke & CO alarms on day one",
+    statutory: true,
+    description: () =>
+      "The Smoke & Carbon Monoxide Alarm (England) Regulations require every alarm to be tested on the first day of a new tenancy. Photograph the test and log it as evidence.",
+    consequence: () =>
+      "Civil penalty up to £5,000 per breach from the local authority. A working test record is the single best evidence you have.",
+    steps: [
+      "Press-test every smoke alarm on the first day of tenancy.",
+      "Press-test every CO alarm in rooms with a solid-fuel appliance.",
+      "Photograph the alarms as evidence and upload here.",
+    ],
+    contextRows: (c) => [
+      { label: "When", value: `On ${c.contractStart}` },
+      { label: "Evidence", value: "Photos + timestamped log" },
+    ],
+    actions: [
+      { kind: "upload", label: "Upload evidence", vaultDoc: "Smoke & CO Alarm Evidence" },
+      { kind: "mark-done", label: "Mark tested" },
+      { kind: "remind", label: "Remind me" },
+    ],
+    daysRemaining: (c) => daysUntil(c.contractStart),
+  },
+
+  l10: {
+    category: "recommended",
+    subtitle: "After the tenant has reviewed the inventory",
+    statutory: false,
+    description: (c) =>
+      `Once ${c.tenantFirstName} has reviewed the move-in inventory and flagged any issues, countersign it to close the record.`,
+    steps: [
+      "Review the tenant's inventory response.",
+      "Resolve any flagged items (photos, notes).",
+      "Countersign in the app — both copies are stored in the Vault.",
+    ],
+    contextRows: (c) => [
+      { label: "Tenant", value: c.tenantName },
+      { label: "Status", value: "Awaiting tenant review" },
+    ],
+    actions: [
+      { kind: "mark-done", label: "Countersign" },
+      { kind: "remind", label: "Remind me" },
+    ],
+    daysRemaining: () => null,
+  },
+
+  // === MOVE-OUT ============================================================
+
+  l16: {
+    category: "recommended",
+    subtitle: "Compare against the move-in inventory",
+    statutory: false,
+    description: () =>
+      "Walk the property on the agreed check-out date and compare against the move-in inventory. Photograph any changes and note them for the deposit return decision.",
+    steps: [
+      "Arrange a mutual check-out date with the tenant.",
+      "Walk the property with the move-in inventory in hand.",
+      "Photograph every discrepancy and log it.",
+    ],
+    contextRows: (c) => [
+      { label: "Tenant", value: c.tenantName },
+      { label: "Evidence", value: "Photos + annotated inventory" },
+    ],
+    actions: [
+      { kind: "mark-done", label: "Inspection complete" },
+      { kind: "remind", label: "Remind me" },
+    ],
+    daysRemaining: () => null,
+  },
+
+  l17: {
+    category: "recommended",
+    subtitle: "Timestamped photos only",
+    statutory: false,
+    description: () =>
+      "Upload timestamped photos of any damage, excessive wear, or missing items. These are your evidence in a deposit adjudication.",
+    steps: [
+      "Photograph every flagged item with timestamps.",
+      "Upload the photos to the Vault.",
+      "Cross-reference them against the move-in inventory.",
+    ],
+    contextRows: () => [
+      { label: "Evidence type", value: "Timestamped photos" },
+      { label: "Used in", value: "Deposit adjudication" },
+    ],
+    actions: [
+      { kind: "upload", label: "Upload photos", vaultDoc: "Move-Out Photos" },
+      { kind: "remind", label: "Remind me" },
+    ],
+    daysRemaining: () => null,
+  },
+
+  l18: {
+    category: "required-legal",
+    subtitle: "Itemised list required by TDP schemes",
+    statutory: true,
+    description: () =>
+      "Any deposit deduction must be itemised — a single line labelled 'damages' will not hold up at adjudication. Reference the move-in inventory, photos, and quotes for each charge.",
+    consequence: () =>
+      "Adjudicators default to the tenant when evidence is thin. A vague claim is the single most common reason landlords lose deposit disputes.",
+    steps: [
+      "List each deduction with a short description.",
+      "Attach the relevant photos and supplier quotes.",
+      "Send the itemised list to the tenant via the app.",
+    ],
+    contextRows: (c) => [
+      { label: "Tenant", value: c.tenantName },
+      { label: "Evidence", value: "Itemised list + photos + quotes" },
+    ],
+    actions: [
+      { kind: "mark-done", label: "Submit list" },
+      { kind: "external", label: "Open thread ↗", href: "#comms" },
+    ],
+    daysRemaining: () => null,
+  },
+
+  l19: {
+    category: "time-bound-legal",
+    subtitle: "Statutory · within 10 days of agreement",
+    statutory: true,
+    description: (c) =>
+      `Once deductions are agreed, the remaining deposit must be returned to ${c.tenantFirstName} within 10 days. Late returns are a common cause of county court claims.`,
+    consequence: () =>
+      "Tenant can raise a county court claim. Interest and costs are typically awarded on top of the deposit.",
+    steps: [
+      "Agree the deduction amount with the tenant.",
+      "Transfer the balance to the tenant's nominated account.",
+      "Log the transfer date and reference in the app.",
+    ],
+    contextRows: (c) => [
+      { label: "Tenant", value: c.tenantName },
+      { label: "Statutory window", value: "10 days from agreement" },
+    ],
+    actions: [
+      { kind: "mark-done", label: "Mark returned" },
+      { kind: "remind", label: "Remind me" },
+    ],
+    daysRemaining: () => null,
+  },
+
   // === DURING TENANCY (used for p2/p3 active properties) ===================
 
   l13: {
@@ -317,7 +514,7 @@ export const TASK_LIBRARY: Record<string, TaskLibraryEntry> = {
       { kind: "external", label: "Find an assessor ↗", href: "https://www.gov.uk/find-energy-certificate" },
       { kind: "remind", label: "Remind me" },
     ],
-    daysRemaining: () => -27, // matches p2's expired EPC
+    daysRemaining: () => 28, // upcoming EPC renewal window for p2
   },
 
   l12: {

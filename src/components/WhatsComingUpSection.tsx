@@ -2,6 +2,11 @@ interface UpcomingItem {
   title: string;
   property: string;
   days: number;
+  // Optional override for the badge text (e.g. "Renew", "Review").
+  // When set, the days number is suppressed in favour of this label.
+  label?: string;
+  // Sub-text shown under the title (e.g. "Renters' Rights Act 2024").
+  sub?: string;
 }
 
 interface UpcomingGroup {
@@ -67,35 +72,43 @@ export function WhatsComingUpSection({
               {group.label}
             </div>
 
-            {group.items.map((item) => (
-              <div
-                key={`${item.title}-${item.property}`}
-                className="flex items-center justify-between gap-3 px-4 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-foreground truncate">{item.title}</p>
-                  <p className="text-[12px] text-muted-foreground truncate">{item.property}</p>
+            {group.items.map((item) => {
+              const badge = item.label ?? `${item.days} days`;
+              const isTextBadge = Boolean(item.label);
+              return (
+                <div
+                  key={`${item.title}-${item.property}`}
+                  className="flex items-center justify-between gap-3 px-4 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-foreground truncate">{item.title}</p>
+                    <p className="text-[12px] text-muted-foreground truncate">
+                      {item.sub ? `${item.property} · ${item.sub}` : item.property}
+                    </p>
+                  </div>
+                  <div className="shrink-0">
+                    {group.amberPill ? (
+                      <span
+                        className={`text-[11px] rounded-lg ${isTextBadge ? "" : "tabular-nums"}`}
+                        style={{
+                          padding: "3px 8px",
+                          backgroundColor: "hsl(var(--warning-muted))",
+                          color: "hsl(var(--warning))",
+                        }}
+                      >
+                        {badge}
+                      </span>
+                    ) : (
+                      <span
+                        className={`text-[12px] text-muted-foreground ${isTextBadge ? "" : "tabular-nums"}`}
+                      >
+                        {badge}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="shrink-0">
-                  {group.amberPill ? (
-                    <span
-                      className="text-[11px] tabular-nums rounded-lg"
-                      style={{
-                        padding: "3px 8px",
-                        backgroundColor: "hsl(var(--warning-muted))",
-                        color: "hsl(var(--warning))",
-                      }}
-                    >
-                      {item.days} days
-                    </span>
-                  ) : (
-                    <span className="text-[12px] text-muted-foreground tabular-nums">
-                      {item.days} days
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ))}
       </div>

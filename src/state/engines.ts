@@ -5,7 +5,7 @@
 //  - extractFactsFor: mock AI extraction (deterministic, per the brief)
 
 import {
-  DOC_VALIDITY_BY_PROP, VAULT_INIT, PROP_CONTRACT, TASK_DATA,
+  DOC_VALIDITY_BY_PROP, VAULT_INIT, PROP_CONTRACT, TASK_DATA, TENANCY_INFO,
   type VaultDoc, type DocValidity, type Property, type TaskItem,
 } from "@/data/constants";
 
@@ -37,11 +37,26 @@ export function extractFactsFor(propId: string, docName: string): ExtractedFacts
         fields: { rating, issued, validFor: "10 years" },
       };
     }
-    case "Gas Safety Certificate":
+    case "Gas Safety Certificate": {
+      // If the static validity still reads "expired" but the landlord has
+      // just uploaded a fresh copy, treat this as a renewal and describe
+      // the new 12-month window instead of parroting the old expiry date.
+      if (validity?.status === "expired") {
+        return {
+          summary: "Renewed today · valid 12 months · Gas Safe engineer",
+          fields: {
+            renewedOn: "Today",
+            nextInspection: "12 months",
+            engineer: "Gas Safe registered",
+            outcome: "Satisfactory",
+          },
+        };
+      }
       return {
         summary: validity ? `Expires ${validity.expiry} · Gas Safe engineer` : "Annual landlord gas safety record",
         fields: { expiry: validity?.expiry ?? "—", checkedBy: "Gas Safe registered" },
       };
+    }
     case "EICR Report":
       return {
         summary: validity ? `Valid until ${validity.expiry} · all circuits passed` : "5-yearly electrical installation report",
@@ -131,13 +146,44 @@ export function getLifecyclePhase(
   const isDone = (t: TaskItem) =>
     !!completed[`${property.id}_${t.id}`] || (!!t.vaultDoc && isDocUp(t.vaultDoc));
 
-  for (const ph of ACTIVE_PHASES) {
-    const tasks = (TASK_DATA["landlord"][ph] ?? []).filter(
-      t => !t.isContractUpload && !t.isContractSign && (!t.hmoOnly || property.isHmo)
+  const tasksFor = (ph: LifecyclePhase) =>
+    (TASK_DATA["landlord"][ph] ?? []).filter(
+      t => !t.isContractUpload && !t.isContractSign && (!t.hmoOnly || property.isHmo),
     );
-    if (tasks.some(t => !isDone(t))) return ph;
+
+  // TENANCY_INFO is the authoritative baseline for where each property
+  // currently sits. A tenancy that started three months ago is "During
+  // Tenancy" regardless of whether a pre-move-in meter-reading task was
+  // ever checked off — those tasks become historical residue, not a reason
+  // to display the property as pre-move-in.
+  const declared = TENANCY_INFO[property.id]?.currentPhase ?? "Pre-Move-In";
+  const baseIdx = Math.max(0, ACTIVE_PHASES.indexOf(declared));
+
+  // Walk forward from the declared phase. We stay in a phase while it has
+  // open tasks, and only advance to the next phase when this one is done
+  // AND the next phase has actually started (at least one completion) —
+  // that prevents us from jumping into "Move-Out" just because future
+  // tasks exist in the catalogue.
+  for (let i = baseIdx; i < ACTIVE_PHASES.length; i++) {
+    const ph = ACTIVE_PHASES[i];
+    const tasks = tasksFor(ph);
+    const hasOpen = tasks.some(t => !isDone(t));
+    if (hasOpen) return ph;
+
+    const next = ACTIVE_PHASES[i + 1];
+    if (!next) return ph;
+
+    // Normal phase transitions advance as soon as the current phase is
+    // complete. The exception is During Tenancy → Move-Out: that catalogue
+    // is always populated as "future work", so we only shift the property
+    // to Move-Out once the landlord has actually started one of those
+    // tasks (check-out inspection, damage evidence, etc.).
+    if (ph === "During Tenancy" && !tasksFor(next).some(t => isDone(t))) {
+      return ph;
+    }
   }
-  return "During Tenancy";
+
+  return ACTIVE_PHASES[ACTIVE_PHASES.length - 1];
 }
 
 // Counts of open vs done tasks per phase, used for the lifecycle tracker

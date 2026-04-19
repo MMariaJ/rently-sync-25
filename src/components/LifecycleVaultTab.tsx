@@ -8,10 +8,13 @@
 //   - VAULT_INIT + Index.tsx prefilled vaults → what's filed per property
 //   - DOC_VALIDITY_BY_PROP → expiry dates and status per document
 
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   DOC_VALIDITY_BY_PROP, VAULT_INIT,
   type Property, type VaultDoc, type DocValidity,
 } from "@/data/constants";
+import { extractFactsFor } from "@/state/engines";
 
 const PURPLE = "#534AB7";
 
@@ -143,13 +146,47 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
   const validity = DOC_VALIDITY_BY_PROP[property.id] ?? {};
   const isHmo = !!property.isHmo;
 
+  // For overdue renewals, show the AI-extracted facts inline in the red card
+  // and require the landlord to confirm before we file the doc. Keeps the
+  // key facts anchored to the upload rather than flashing past in a toast.
+  const [pendingRenewal, setPendingRenewal] = useState<string | null>(null);
+
+  const handleUpload = (docName: string) => {
+    onUploadDocDirect?.(property.id, docName);
+    toast.success("Uploaded · filed in Vault", {
+      description: `${docName} added to this property's record.`,
+    });
+  };
+
+  const handleConfirmRenewal = (docName: string) => {
+    onUploadDocDirect?.(property.id, docName);
+    setPendingRenewal(null);
+    toast.success("Renewal filed", {
+      description: `${docName} confirmed and filed in Vault.`,
+    });
+  };
+
   // Filter HMO licence visibility
   const allDocsForProp = vault.filter((d) => isHmo || d.name !== "HMO Licence");
 
-  // Buckets
+  // Buckets. A "Just now" timestamp means the landlord just re-uploaded —
+  // treat that as a renewal regardless of the static validity record.
+  const isFreshRenewal = (d: VaultDoc) => d.timestamp === "Just now";
   const filed = allDocsForProp.filter((d) => d.status === "uploaded");
-  const filedNonExpired = filed.filter((d) => validity[d.name]?.status !== "expired");
-  const expired = filed.filter((d) => validity[d.name]?.status === "expired");
+  const filedNonExpired = filed.filter(
+    (d) => validity[d.name]?.status !== "expired" || isFreshRenewal(d),
+  );
+  // For p2 and p3, surface "Renew soon" docs at the top of Filed & current
+  if (property.id === "p2" || property.id === "p3") {
+    filedNonExpired.sort((a, b) => {
+      const aExpiring = validity[a.name]?.status === "expiring" ? 0 : 1;
+      const bExpiring = validity[b.name]?.status === "expiring" ? 0 : 1;
+      return aExpiring - bExpiring;
+    });
+  }
+  const expired = filed.filter(
+    (d) => validity[d.name]?.status === "expired" && !isFreshRenewal(d),
+  );
 
   const filedNames = new Set(filed.map((d) => d.name));
   // Still to collect = landlord-owned docs that aren't filed yet
@@ -206,9 +243,7 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
           <button
             onClick={() => {
               const next = toCollect[0]?.name;
-              if (next && onUploadDocDirect) {
-                onUploadDocDirect(property.id, next);
-              }
+              if (next) handleUpload(next);
             }}
             className="text-foreground"
             style={{
@@ -247,6 +282,8 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
               const v = validity[doc.name];
               const daysOverdue = v ? Math.abs(v.days) : 0;
               const filename = syntheticFilename(doc.name, property.address);
+              const isPending = pendingRenewal === doc.name;
+              const previewFacts = isPending ? extractFactsFor(property.id, doc.name) : null;
               return (
                 <div
                   key={doc.id}
@@ -293,42 +330,130 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
                     </span>
                   </div>
 
-                  <div
-                    className="flex items-center justify-between gap-3"
-                    style={{ paddingTop: "10px", borderTop: `0.5px solid ${RED_DIVIDER}` }}
-                  >
-                    <p className="text-muted-foreground min-w-0" style={{ fontSize: "12px" }}>
-                      {extractedFacts?.[`${property.id}::${doc.name}`]?.summary ?? extractedSummary(doc.name, v)}
-                    </p>
-                    <div className="flex items-center shrink-0" style={{ gap: "8px" }}>
-                      <button
-                        className="text-muted-foreground"
+                  {isPending && previewFacts ? (
+                    <div
+                      style={{
+                        paddingTop: "12px",
+                        borderTop: `0.5px solid ${RED_DIVIDER}`,
+                      }}
+                    >
+                      <div
                         style={{
-                          padding: "6px 12px",
-                          fontSize: "12px",
-                          backgroundColor: "transparent",
-                          border: "0.5px solid hsl(var(--muted-foreground) / 0.3)",
+                          backgroundColor: "#F7F5FD",
+                          border: `0.5px solid ${PURPLE}33`,
                           borderRadius: "8px",
+                          padding: "12px 14px",
+                          marginBottom: "12px",
                         }}
                       >
-                        View
-                      </button>
-                      <button
-                        onClick={() => onUploadDocDirect?.(property.id, doc.name)}
-                        className="font-medium text-white"
-                        style={{
-                          padding: "6px 12px",
-                          fontSize: "12px",
-                          backgroundColor: PURPLE,
-                          border: "none",
-                          borderRadius: "8px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Renew →
-                      </button>
+                        <p
+                          className="font-medium"
+                          style={{
+                            fontSize: "11px",
+                            color: PURPLE,
+                            letterSpacing: "0.3px",
+                            textTransform: "uppercase",
+                            marginBottom: "6px",
+                          }}
+                        >
+                          ✦ Key facts captured
+                        </p>
+                        <p
+                          style={{
+                            fontSize: "13px",
+                            color: "hsl(var(--foreground))",
+                            lineHeight: 1.5,
+                            marginBottom: previewFacts.fields && Object.keys(previewFacts.fields).length > 0 ? "8px" : 0,
+                          }}
+                        >
+                          {previewFacts.summary}
+                        </p>
+                        {previewFacts.fields && Object.keys(previewFacts.fields).length > 0 && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px" }}>
+                            {Object.entries(previewFacts.fields).map(([k, val]) => (
+                              <div key={k} className="flex items-center justify-between gap-2" style={{ fontSize: "12px" }}>
+                                <span className="text-muted-foreground capitalize">{k.replace(/([A-Z])/g, " $1").toLowerCase()}</span>
+                                <span className="text-foreground tabular-nums text-right truncate">{val}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <p
+                          className="text-muted-foreground"
+                          style={{ fontSize: "11px", lineHeight: 1.5, marginTop: "8px" }}
+                        >
+                          Check these details match the new certificate, then confirm to file.
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setPendingRenewal(null)}
+                          className="text-muted-foreground"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            backgroundColor: "transparent",
+                            border: "0.5px solid hsl(var(--muted-foreground) / 0.3)",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleConfirmRenewal(doc.name)}
+                          className="font-medium text-white"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            backgroundColor: PURPLE,
+                            border: "none",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Confirm & file
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div
+                      className="flex items-center justify-between gap-3"
+                      style={{ paddingTop: "10px", borderTop: `0.5px solid ${RED_DIVIDER}` }}
+                    >
+                      <p className="text-muted-foreground min-w-0" style={{ fontSize: "12px" }}>
+                        {extractedFacts?.[`${property.id}::${doc.name}`]?.summary ?? extractedSummary(doc.name, v)}
+                      </p>
+                      <div className="flex items-center shrink-0" style={{ gap: "8px" }}>
+                        <button
+                          className="text-muted-foreground"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            backgroundColor: "transparent",
+                            border: "0.5px solid hsl(var(--muted-foreground) / 0.3)",
+                            borderRadius: "8px",
+                          }}
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => setPendingRenewal(doc.name)}
+                          className="font-medium text-white"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            backgroundColor: PURPLE,
+                            border: "none",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Renew →
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -367,7 +492,7 @@ export function LifecycleVaultTab({ property, allVaults, extractedFacts, onUploa
                   key={group.label}
                   label={group.label}
                   items={items}
-                  onUpload={(name) => onUploadDocDirect?.(property.id, name)}
+                  onUpload={(name) => handleUpload(name)}
                 />
               );
             })}

@@ -1,3 +1,5 @@
+import { LANDLORD_PROFILE } from "@/data/constants";
+
 export type HeroState = "healthy" | "compliance" | "late";
 
 interface HeroCardProps {
@@ -36,7 +38,8 @@ export function HeroHealthyCard({
   const inkSoft = isHealthy ? "#3A7355" : "hsl(0 45% 38%)";
 
   const defaultHealthyHeadline = `Everything's sorted, David ${"\u2726"}`;
-  const defaultHealthySecondary = `All ${itemsOnTrack} compliance items on track · Next deadline in ${nextDeadlineDays} days`;
+  const defaultHealthySecondary = `All compliance items on track · Next deadline in ${nextDeadlineDays} days`;
+  void itemsOnTrack;
 
   const finalHeadline = headline ?? defaultHealthyHeadline;
   const finalSecondary = secondary ?? defaultHealthySecondary;
@@ -47,12 +50,20 @@ export function HeroHealthyCard({
       style={{ backgroundColor: bg }}
     >
       {/* LEFT — avatar */}
-      <div
-        className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
-        style={{ backgroundColor: avatarBg, color: ink }}
-      >
-        <span className="text-[14px] font-medium tracking-tight">DC</span>
-      </div>
+      {LANDLORD_PROFILE.avatarUrl ? (
+        <img
+          src={LANDLORD_PROFILE.avatarUrl}
+          alt={LANDLORD_PROFILE.name}
+          className="w-12 h-12 rounded-full object-cover shrink-0"
+        />
+      ) : (
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+          style={{ backgroundColor: avatarBg, color: ink }}
+        >
+          <span className="text-[14px] font-medium tracking-tight">DC</span>
+        </div>
+      )}
 
       {/* MIDDLE */}
       <div className="flex-1 min-w-0 px-4">

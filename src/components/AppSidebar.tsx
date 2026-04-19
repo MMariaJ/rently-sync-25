@@ -21,8 +21,12 @@ const landlordNav: { id: SidebarTab; label: string }[] = [
   { id: "settings", label: "Settings" },
 ];
 
+// Tenant has a single property, so "Properties" doesn't belong — the
+// "Tenancy" page already contains everything about that one tenancy.
+// Reviews and Alerts at this level span every tenancy (current + past),
+// while the per-tenancy Reviews tab is scoped to just this landlord.
 const tenantNav: { id: SidebarTab; label: string }[] = [
-  { id: "home", label: "Dashboard" },
+  { id: "home", label: "Tenancy" },
   { id: "alerts", label: "Alerts" },
   { id: "reviews", label: "Reviews" },
   { id: "settings", label: "Settings" },
@@ -56,11 +60,6 @@ export function AppSidebar({
                 )}
               >
                 <span>{item.label}</span>
-                {item.id === "alerts" && alertCount > 0 && (
-                  <span className="min-w-[16px] h-[16px] rounded-full text-[10px] font-medium flex items-center justify-center px-1 bg-danger-muted text-danger">
-                    {alertCount}
-                  </span>
-                )}
               </button>
             );
           })}

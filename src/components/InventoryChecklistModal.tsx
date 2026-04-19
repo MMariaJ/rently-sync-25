@@ -1,10 +1,16 @@
 // Inventory confirm-checklist.
-// Triggered when the landlord uploads the Move-In Inventory. They tick off
-// each item before it's filed in the Vault. Issues raised here are surfaced
-// as activity events so the audit trail is honest.
+// Triggered by either side of the tenancy:
+//  - Landlord uploads the Move-In Inventory and ticks off each item before
+//    it's filed in the Vault.
+//  - Tenant opens it from their "Review & confirm move-in inventory" task
+//    and either confirms every item or flags issues. Flagged issues route
+//    the caller to Comms so a thread can be opened; clean runs mark the
+//    task done and file the confirmation.
+// Issues raised here are surfaced as activity events so the audit trail
+// is honest.
 
 import { useMemo, useState } from "react";
-import { Check, AlertTriangle, X } from "lucide-react";
+import { Check, AlertTriangle, Pencil, X } from "lucide-react";
 
 const PURPLE = "#534AB7";
 const AMBER_BG = "#FFFAEE";
@@ -23,12 +29,13 @@ export interface InventoryChecklistModalProps {
   filename: string;
   onClose: () => void;
   onConfirm: (summary: { confirmed: number; total: number; issues: string[] }) => void;
+  role?: "landlord" | "tenant";
 }
 
 type ItemState = "ok" | "issue" | null;
 
 export function InventoryChecklistModal({
-  propertyAddress, filename, onClose, onConfirm,
+  propertyAddress, filename, onClose, onConfirm, role = "landlord",
 }: InventoryChecklistModalProps) {
   const all = useMemo(
     () => DEFAULT_ROOMS.flatMap((r) => r.items.map((i) => `${r.room}: ${i}`)),
@@ -46,6 +53,10 @@ export function InventoryChecklistModal({
   }, [state, all]);
 
   const allReviewed = counts.ok + counts.issue === counts.total;
+  // Tenants can fire "Open thread" as soon as they've flagged anything — we
+  // shouldn't force them to mark every unaffected row OK before raising an
+  // issue. Landlords still need a full review before filing.
+  const canConfirm = role === "tenant" ? (allReviewed || counts.issue > 0) : allReviewed;
 
   const setAllOk = () => {
     const next: Record<string, ItemState> = {};
@@ -88,8 +99,9 @@ export function InventoryChecklistModal({
         {/* Intro */}
         <div className="px-6 pt-3 pb-2">
           <p className="text-[12px] text-muted-foreground">
-            Tick each item to confirm it's present and in working order, or flag an issue. The signed
-            checklist is filed alongside the inventory as evidence.
+            {role === "tenant"
+              ? "Tick each item to confirm it's present and in working order, or flag an issue. Anything you flag opens a thread with your landlord so it's fixed before move-in."
+              : "Tick each item to confirm it's present and in working order, or mark it to amend. The signed checklist is filed alongside the inventory as evidence."}
           </p>
         </div>
 
@@ -134,7 +146,10 @@ export function InventoryChecklistModal({
                           fontWeight: s === "issue" ? 500 : 400,
                         }}
                       >
-                        <AlertTriangle className="w-3 h-3" /> Issue
+                        {role === "landlord"
+                          ? <Pencil className="w-3 h-3" />
+                          : <AlertTriangle className="w-3 h-3" />
+                        } {role === "landlord" ? "Amend" : "Issue"}
                       </button>
                     </div>
                   );
@@ -147,7 +162,7 @@ export function InventoryChecklistModal({
         {/* Footer */}
         <div className="hairline-t px-6 py-4 flex items-center gap-3">
           <div className="flex-1 text-[12px] text-muted-foreground">
-            {counts.ok} ok · {counts.issue} flagged · {counts.total - counts.ok - counts.issue} to review
+            {counts.ok} ok · {counts.issue} {role === "landlord" ? "to amend" : "flagged"} · {counts.total - counts.ok - counts.issue} to review
           </div>
           <button
             onClick={setAllOk}
@@ -158,11 +173,11 @@ export function InventoryChecklistModal({
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!allReviewed}
+            disabled={!canConfirm}
             className="px-4 py-2 rounded-lg text-[13px] font-medium text-white disabled:opacity-40"
             style={{ backgroundColor: PURPLE }}
           >
-            Confirm & file
+            {role === "tenant" && counts.issue > 0 ? "Open thread" : "Confirm & file"}
           </button>
         </div>
       </div>

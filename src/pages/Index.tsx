@@ -5,7 +5,6 @@ import { Dashboard } from "@/components/Dashboard";
 import { LandlordHome } from "@/components/LandlordHome";
 import { PropertyOverview, type TabKey } from "@/components/PropertyOverview";
 import { TenantHome } from "@/components/TenantHome";
-import { TenantPropertyView } from "@/components/TenantPropertyView";
 import { AlertsPage } from "@/components/AlertsPage";
 import { ReviewsPage } from "@/components/ReviewsPage";
 import { SettingsPage } from "@/components/SettingsPage";
@@ -59,38 +58,61 @@ export default function Index() {
   };
 
   const renderContent = () => {
-    // ---------- Property detail (both roles) ----------
+    // ---------- Tenant ----------
+    // Top-level nav: Tenancy (the single-page tenancy shell with its own
+    // tab bar), Alerts, Reviews, Settings. Reviews at this level spans
+    // every tenancy past + present; the tab inside Tenancy stays scoped
+    // to the current property's landlord.
+    if (!isLL) {
+      if (sidebarTab === "alerts") {
+        return (
+          <AlertsPage
+            portfolio={visibleProperties}
+            allVaults={store.vaults}
+            onOpenAlert={openAlert}
+          />
+        );
+      }
+      if (sidebarTab === "reviews") {
+        return (
+          <ReviewsPage
+            portfolio={visibleProperties}
+            isLandlord={false}
+            onOpenProperty={(id) => openProperty(id, "Reviews")}
+            reviews={store.reviews}
+            onAddReview={store.addReview}
+          />
+        );
+      }
+      if (sidebarTab === "settings") {
+        return <SettingsPage isLandlord={false} onSignOut={handleSignOut} />;
+      }
+
+      return (
+        <TenantHome
+          property={tenantProperty}
+          completed={store.completed}
+          allVaults={store.vaults}
+          extractedFacts={store.extractedFacts}
+          reviews={store.reviews}
+          onUploadDocDirect={store.uploadDocDirect}
+          onMarkTaskDone={store.markTaskDone}
+          onUnmarkTaskDone={store.unmarkTaskDone}
+          onSetReminder={store.setReminder}
+          onFileCommsAttachment={store.fileCommsAttachment}
+          onAddReview={store.addReview}
+          onNudgeLandlord={store.nudgeLandlord}
+        />
+      );
+    }
+
+    // ---------- Landlord: property detail ----------
     if (activeProp) {
       const prop = portfolio.find(p => p.id === activeProp);
       if (prop) {
         const onBack = () => { setActiveProp(null); setPropInitialTab(undefined); };
-        if (isLL) {
-          return (
-            <PropertyOverview
-              property={prop}
-              completed={store.completed}
-              allVaults={store.vaults}
-              taskUploads={store.taskUploads}
-              extractedFacts={store.extractedFacts}
-              events={store.events}
-              reviews={store.reviews}
-              onUploadDoc={store.uploadDoc}
-              onUploadDocDirect={store.uploadDocDirect}
-              onMarkTaskDone={store.markTaskDone}
-              onUnmarkTaskDone={store.unmarkTaskDone}
-              onSetReminder={store.setReminder}
-              onFileCommsAttachment={store.fileCommsAttachment}
-              onAddReview={store.addReview}
-              onBack={onBack}
-              initialTab={propInitialTab}
-            />
-          );
-        }
-        // Tenant property view (only valid for their own property)
-        const tenantTab =
-          propInitialTab === "Tasks" || propInitialTab === "Reviews" ? propInitialTab : undefined;
         return (
-          <TenantPropertyView
+          <PropertyOverview
             property={prop}
             completed={store.completed}
             allVaults={store.vaults}
@@ -98,6 +120,7 @@ export default function Index() {
             extractedFacts={store.extractedFacts}
             events={store.events}
             reviews={store.reviews}
+            onUploadDoc={store.uploadDoc}
             onUploadDocDirect={store.uploadDocDirect}
             onMarkTaskDone={store.markTaskDone}
             onUnmarkTaskDone={store.unmarkTaskDone}
@@ -105,13 +128,13 @@ export default function Index() {
             onFileCommsAttachment={store.fileCommsAttachment}
             onAddReview={store.addReview}
             onBack={onBack}
-            initialTab={tenantTab}
+            initialTab={propInitialTab}
           />
         );
       }
     }
 
-    // ---------- Top-level pages ----------
+    // ---------- Landlord: top-level pages ----------
     if (sidebarTab === "alerts") {
       return (
         <AlertsPage
@@ -128,25 +151,14 @@ export default function Index() {
           portfolio={visibleProperties}
           isLandlord={isLL}
           onOpenProperty={(id) => openProperty(id, "Reviews")}
+          reviews={store.reviews}
+          onAddReview={store.addReview}
         />
       );
     }
 
     if (sidebarTab === "settings") {
       return <SettingsPage isLandlord={isLL} onSignOut={handleSignOut} />;
-    }
-
-    // ---------- Home / properties (role-specific) ----------
-    if (!isLL) {
-      // Tenant home only
-      return (
-        <TenantHome
-          property={tenantProperty}
-          completed={store.completed}
-          allVaults={store.vaults}
-          onOpenProperty={() => openProperty(tenantProperty.id)}
-        />
-      );
     }
 
     if (sidebarTab === "home") {
