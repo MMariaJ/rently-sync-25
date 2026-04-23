@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    /* Neutrals */
-    --background: 0 0% 100%;
-    --foreground: 240 8% 12%;
+    /* Warm off-white neutrals — Airbnb-style */
+    --background: 30 25% 99%;
+    --foreground: 240 9% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 8% 12%;
+    --card-foreground: 240 9% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 8% 12%;
+    --popover-foreground: 240 9% 14%;
 
     /* Primary — purple #534AB7 */
     --primary: 248 43% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 8% 12%;
+    --secondary: 30 20% 96%;
+    --secondary-foreground: 240 9% 14%;
 
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 30 20% 96%;
+    --muted-foreground: 240 5% 42%;
 
     --accent: 248 43% 50%;
     --accent-foreground: 0 0% 100%;
@@ -43,12 +43,18 @@
     --destructive: 0 59% 30%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Hairline border — low contrast */
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
+    /* Hairline border — low contrast, slightly warm */
+    --border: 30 8% 90%;
+    --input: 30 8% 90%;
     --ring: 248 43% 50%;
 
-    --radius: 0.75rem; /* 12px — cards */
+    --radius: 1rem; /* 16px — softer, photo-led cards */
+    --radius-image: 1.25rem; /* 20px — for imagery tiles */
+
+    /* Soft elevation tokens (Airbnb-style) */
+    --shadow-soft: 0 1px 2px hsl(240 9% 14% / 0.04), 0 4px 12px hsl(240 9% 14% / 0.06);
+    --shadow-hover: 0 2px 6px hsl(240 9% 14% / 0.06), 0 12px 24px hsl(240 9% 14% / 0.10);
+    --shadow-photo: 0 6px 20px hsl(240 9% 14% / 0.08);
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 4% 46%;
@@ -141,11 +147,36 @@
 }
 
 @layer components {
-  /* Audience router cards — brighten the three neutral borders on hover.
-     Top border stays the brand colour (set inline). */
+  /* Audience router cards — lift on hover, photo-led Airbnb feel. */
+  .audience-card {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
   .audience-card:hover {
-    border-right-color: hsl(var(--foreground) / 0.25) !important;
-    border-bottom-color: hsl(var(--foreground) / 0.25) !important;
-    border-left-color: hsl(var(--foreground) / 0.25) !important;
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  /* Photo-led property card lift */
+  .photo-card {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: var(--shadow-soft);
+  }
+  .photo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+  }
+  .photo-card .photo-zoom {
+    transition: transform 0.6s ease;
+  }
+  .photo-card:hover .photo-zoom {
+    transform: scale(1.04);
+  }
+
+  /* Soft surface card — used for hero/dashboard panels */
+  .surface-card {
+    background: hsl(var(--card));
+    border: 0.5px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
   }
 }

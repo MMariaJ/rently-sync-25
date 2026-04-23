@@ -97,12 +97,12 @@ export default {
         },
       },
       borderRadius: {
-        lg: "0.5rem",                // 8px — pills/buttons
+        lg: "0.625rem",              // 10px — pills/buttons
         md: "0.5rem",                // 8px — inputs
         sm: "0.375rem",              // 6px
-        xl: "var(--radius)",         // 12px — cards
-        "2xl": "var(--radius)",      // alias to 12px
-        "3xl": "var(--radius)",      // alias to 12px (legacy)
+        xl: "var(--radius)",         // 16px — cards
+        "2xl": "var(--radius)",      // alias to 16px
+        "3xl": "var(--radius-image)",// 20px — photo tiles
       },
       borderWidth: {
         DEFAULT: "0.5px",
@@ -110,11 +110,11 @@ export default {
       },
       boxShadow: {
         none: "none",
-        soft: "none",
-        card: "none",
-        "card-hover": "none",
-        elevated: "none",
-        glow: "none",
+        soft: "var(--shadow-soft)",
+        card: "var(--shadow-soft)",
+        "card-hover": "var(--shadow-hover)",
+        photo: "var(--shadow-photo)",
+        elevated: "var(--shadow-hover)",
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },

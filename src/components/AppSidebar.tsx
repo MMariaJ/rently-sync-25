@@ -38,11 +38,16 @@ export function AppSidebar({
   const nav = isLandlord ? landlordNav : tenantNav;
 
   return (
-    <header className="sticky top-0 z-50 bg-background hairline-b">
-      <div className="max-w-[1100px] mx-auto px-6 flex items-center h-14">
+    <header className="sticky top-0 z-50 bg-background/85 hairline-b backdrop-blur-md">
+      <div className="max-w-[1100px] mx-auto px-6 flex items-center h-16">
         <div className="flex items-center gap-2 mr-10">
-          <div className="w-5 h-5 rounded-md bg-primary" />
-          <span className="text-[15px] font-medium text-foreground tracking-tight">HomeBound</span>
+          <div
+            className="w-7 h-7 rounded-[8px] flex items-center justify-center"
+            style={{ backgroundColor: "hsl(var(--primary))" }}
+          >
+            <span style={{ color: "#fff", fontSize: "13px", fontWeight: 500 }}>H</span>
+          </div>
+          <span className="text-[15px] font-medium text-foreground tracking-tight">Homebound</span>
         </div>
 
         <nav className="flex items-center gap-1 flex-1">
@@ -53,10 +58,10 @@ export function AppSidebar({
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
                 className={cn(
-                  "flex items-center gap-2 h-8 rounded-lg px-3 text-[13px] transition-colors",
+                  "flex items-center gap-2 h-9 rounded-full px-4 text-[13px] transition-all",
                   isActive
-                    ? "text-primary bg-primary/8 font-medium"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-primary-foreground bg-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                 )}
               >
                 <span>{item.label}</span>
@@ -67,7 +72,7 @@ export function AppSidebar({
 
         <button
           onClick={onSignOut}
-          className="flex items-center gap-1.5 h-8 rounded-lg px-2.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 h-9 rounded-full px-3 text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
         >
           <LogOut className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Sign out</span>
