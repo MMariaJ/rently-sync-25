@@ -470,21 +470,25 @@ export const RECURRING_PAYMENTS: Record<string, Array<{
 };
 
 // Property photos placeholder
+import propElmwood from "@/assets/property-elmwood.jpg";
+import propCrane from "@/assets/property-crane.jpg";
+import propSaffron from "@/assets/property-saffron.jpg";
+
 export const PROP_PHOTOS: Record<string, { label: string; src: string }[]> = {
   p1: [
-    { label: "Living Room", src: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=300&fit=crop" },
-    { label: "Kitchen", src: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop" },
-    { label: "Bathroom", src: "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=400&h=300&fit=crop" },
+    { label: "Front of house", src: propElmwood },
+    { label: "Living Room", src: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop" },
+    { label: "Kitchen", src: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=600&fit=crop" },
   ],
   p2: [
-    { label: "Bedroom", src: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400&h=300&fit=crop" },
-    { label: "Kitchen", src: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop" },
-    { label: "Living", src: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=300&fit=crop" },
+    { label: "Building exterior", src: propCrane },
+    { label: "Bedroom", src: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&h=600&fit=crop" },
+    { label: "Living", src: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop" },
   ],
   p3: [
-    { label: "Living Room", src: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=300&fit=crop" },
-    { label: "Bedroom", src: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400&h=300&fit=crop" },
-    { label: "Kitchen", src: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop" },
+    { label: "Front door", src: propSaffron },
+    { label: "Living Room", src: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop" },
+    { label: "Bedroom", src: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&h=600&fit=crop" },
   ],
 };
 

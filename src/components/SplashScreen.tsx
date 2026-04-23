@@ -1,11 +1,11 @@
 // Audience router — the unauthenticated landing page.
 //
-// One job: ask "are you a landlord or a tenant?" and route accordingly.
-// No top nav, no marketing chrome, no scroll content. Two distinct cards
-// differentiated on two axes (colour + icon) so the choice reads at a
-// glance, in greyscale, and for colour-blind users.
+// Photo-led, Airbnb-warmth aesthetic. The hero photograph is the headline
+// and the two role cards sit on a soft warm background with subtle
+// elevation and a gentle hover lift.
 
-import { Home, User, Shield } from "lucide-react";
+import { Home, User, Shield, ArrowRight } from "lucide-react";
+import landingHero from "@/assets/landing-hero.jpg";
 
 interface SplashScreenProps {
   onSelectRole: (role: "landlord" | "tenant") => void;
@@ -21,95 +21,157 @@ const TEAL_TINT = "#E1F5EE";
 
 export function SplashScreen({ onSelectRole }: SplashScreenProps) {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-6 py-16">
-      <div className="w-full mx-auto" style={{ maxWidth: "920px" }}>
-        {/* Brand lockup — logo placeholder + wordmark */}
+    <div className="min-h-screen bg-background">
+      {/* Top brand bar — minimal, generous */}
+      <header className="w-full">
         <div
-          className="flex items-center justify-center"
-          style={{ gap: "10px", marginBottom: "2.5rem" }}
+          className="mx-auto flex items-center justify-between"
+          style={{ maxWidth: "1240px", padding: "24px 32px" }}
         >
-          <div
-            className="flex items-center justify-center"
-            style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "10px",
-              backgroundColor: PURPLE,
-            }}
-            aria-hidden="true"
-          >
-            <Shield size={18} strokeWidth={2} color="#ffffff" />
+          <div className="flex items-center" style={{ gap: "10px" }}>
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "10px",
+                backgroundColor: PURPLE,
+              }}
+              aria-hidden="true"
+            >
+              <Shield size={16} strokeWidth={2} color="#ffffff" />
+            </div>
+            <span
+              style={{
+                fontSize: "17px",
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
+                color: PURPLE_DEEP,
+              }}
+            >
+              Homebound
+            </span>
           </div>
           <span
-            style={{
-              fontSize: "20px",
-              fontWeight: 600,
-              letterSpacing: "-0.01em",
-              color: PURPLE_DEEP,
-            }}
+            className="text-muted-foreground"
+            style={{ fontSize: "13px" }}
           >
-            Homebound
+            UK landlord & tenant compliance
           </span>
         </div>
+      </header>
 
-        {/* Headline block */}
-        <div className="text-center" style={{ marginBottom: "3.5rem" }}>
-          <h1
-            className="text-foreground"
-            style={{
-              fontSize: "44px",
-              fontWeight: 500,
-              lineHeight: 1.15,
-              letterSpacing: "-0.02em",
-              marginBottom: "1.25rem",
-            }}
-          >
-            Stay compliant. Stay <span style={{ color: PURPLE }}>protected</span>.
-          </h1>
-          <p
-            className="text-muted-foreground mx-auto"
-            style={{
-              fontSize: "16px",
-              lineHeight: 1.5,
-              maxWidth: "540px",
-            }}
-          >
-            Track every obligation, deadline, and document — so nothing slips through the cracks.
-          </p>
-        </div>
-
-        {/* Audience cards */}
+      <main
+        className="mx-auto"
+        style={{ maxWidth: "1240px", padding: "32px 32px 80px" }}
+      >
         <div
-          className="grid"
+          className="grid items-center"
           style={{
             gridTemplateColumns: "1fr 1fr",
-            gap: "16px",
-            marginBottom: "2.5rem",
+            gap: "56px",
           }}
         >
-          <AudienceCard
-            onClick={() => onSelectRole("landlord")}
-            topBorder={PURPLE}
-            iconBg={PURPLE_TINT}
-            icon={<Home size={16} strokeWidth={1.8} color={PURPLE} />}
-            title="I'm a landlord"
-            titleColor={PURPLE_DEEP}
-            description="Manage properties, track compliance, and stay ahead of deadlines."
-            continueColor={PURPLE}
-          />
-          <AudienceCard
-            onClick={() => onSelectRole("tenant")}
-            topBorder={TEAL}
-            iconBg={TEAL_TINT}
-            icon={<User size={16} strokeWidth={1.8} color={TEAL} />}
-            title="I'm a tenant"
-            titleColor={TEAL_DEEP}
-            description="Know your rights, verify obligations, and keep everything documented."
-            continueColor={TEAL}
-          />
-        </div>
+          {/* LEFT — copy + cards */}
+          <div>
+            <span
+              style={{
+                display: "inline-block",
+                fontSize: "12px",
+                fontWeight: 500,
+                color: PURPLE,
+                backgroundColor: PURPLE_TINT,
+                padding: "6px 12px",
+                borderRadius: "999px",
+                marginBottom: "24px",
+              }}
+            >
+              Built for the Renters' Rights Act 2026
+            </span>
+            <h1
+              className="text-foreground"
+              style={{
+                fontSize: "52px",
+                fontWeight: 500,
+                lineHeight: 1.08,
+                letterSpacing: "-0.025em",
+                marginBottom: "20px",
+              }}
+            >
+              Stay compliant.<br />
+              Stay <span style={{ color: PURPLE }}>protected</span>.
+            </h1>
+            <p
+              className="text-muted-foreground"
+              style={{
+                fontSize: "17px",
+                lineHeight: 1.55,
+                maxWidth: "480px",
+                marginBottom: "40px",
+              }}
+            >
+              Track every obligation, deadline and document — so nothing
+              slips through the cracks. Trusted by landlords and tenants
+              across the UK.
+            </p>
 
-      </div>
+            {/* Audience cards */}
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <AudienceCard
+                onClick={() => onSelectRole("landlord")}
+                topBorder={PURPLE}
+                iconBg={PURPLE_TINT}
+                icon={<Home size={18} strokeWidth={1.8} color={PURPLE} />}
+                title="I'm a landlord"
+                titleColor={PURPLE_DEEP}
+                description="Manage properties, track compliance, stay ahead of deadlines."
+                continueColor={PURPLE}
+              />
+              <AudienceCard
+                onClick={() => onSelectRole("tenant")}
+                topBorder={TEAL}
+                iconBg={TEAL_TINT}
+                icon={<User size={18} strokeWidth={1.8} color={TEAL} />}
+                title="I'm a tenant"
+                titleColor={TEAL_DEEP}
+                description="Know your rights, verify obligations, keep everything documented."
+                continueColor={TEAL}
+              />
+            </div>
+
+            <p
+              className="text-muted-foreground"
+              style={{ fontSize: "12px", marginTop: "24px" }}
+            >
+              No account required to explore the demo.
+            </p>
+          </div>
+
+          {/* RIGHT — hero photograph */}
+          <div
+            style={{
+              borderRadius: "24px",
+              overflow: "hidden",
+              boxShadow: "var(--shadow-photo)",
+              aspectRatio: "4 / 5",
+              backgroundColor: "hsl(var(--secondary))",
+            }}
+          >
+            <img
+              src={landingHero}
+              alt="A calm, sunlit modern living room"
+              className="w-full h-full object-cover"
+              style={{ display: "block" }}
+            />
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
@@ -139,24 +201,23 @@ function AudienceCard({
         borderRight: "0.5px solid hsl(var(--border))",
         borderBottom: "0.5px solid hsl(var(--border))",
         borderLeft: "0.5px solid hsl(var(--border))",
-        borderRadius: "12px",
-        padding: "1.5rem 1.5rem 1.25rem 1.5rem",
+        borderRadius: "16px",
+        padding: "20px",
         textDecoration: "none",
         color: "inherit",
         cursor: "pointer",
-        transition: "border-color 0.15s ease",
+        boxShadow: "var(--shadow-soft)",
       }}
     >
-      {/* Icon + title row */}
       <div
         className="flex items-center"
-        style={{ gap: "10px", marginBottom: "10px" }}
+        style={{ gap: "12px", marginBottom: "12px" }}
       >
         <div
           className="flex items-center justify-center shrink-0"
           style={{
-            width: "32px",
-            height: "32px",
+            width: "36px",
+            height: "36px",
             borderRadius: "9999px",
             backgroundColor: iconBg,
           }}
@@ -169,35 +230,30 @@ function AudienceCard({
             fontWeight: 500,
             color: titleColor,
             margin: 0,
+            letterSpacing: "-0.01em",
           }}
         >
           {title}
         </h2>
       </div>
 
-      {/* Description */}
       <p
         className="text-muted-foreground"
         style={{
           fontSize: "13px",
           lineHeight: 1.55,
-          marginBottom: "1rem",
+          marginBottom: "16px",
+          minHeight: "44px",
         }}
       >
         {description}
       </p>
 
-      {/* Continue affordance */}
-      <div className="flex justify-end">
-        <span
-          style={{
-            fontSize: "12px",
-            fontWeight: 500,
-            color: continueColor,
-          }}
-        >
-          Continue →
+      <div className="flex items-center justify-between">
+        <span style={{ fontSize: "12px", fontWeight: 500, color: continueColor }}>
+          Continue
         </span>
+        <ArrowRight size={14} strokeWidth={2} color={continueColor} />
       </div>
     </a>
   );
