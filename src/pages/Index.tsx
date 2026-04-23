@@ -196,7 +196,7 @@ export default function Index() {
   }, 0);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "hsl(240 6% 98%)" }}>
+    <div className="min-h-screen bg-background">
       <AppSidebar
         activeTab={sidebarTab}
         onTabChange={(tab) => {
@@ -211,7 +211,7 @@ export default function Index() {
         onExpandedChange={setSidebarExpanded}
       />
 
-      <main className="max-w-[1100px] mx-auto px-6 py-8">
+      <main className="max-w-[1100px] mx-auto px-6 py-10">
         {renderContent()}
       </main>
     </div>

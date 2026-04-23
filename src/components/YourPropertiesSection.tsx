@@ -42,37 +42,39 @@ const DEFAULT_PROPERTIES: PropertyRow[] = [
 export function YourPropertiesSection({ properties = DEFAULT_PROPERTIES, onSelect }: YourPropertiesSectionProps) {
   return (
     <section>
-      <h2
-        className="font-medium text-muted-foreground mb-2.5"
-        style={{ fontSize: "12px", letterSpacing: "0.5px", textTransform: "uppercase" }}
-      >
-        Your properties
-      </h2>
+      <h2 className="label-eyebrow mb-3">Your properties</h2>
 
-      <div className="bg-card hairline rounded-xl overflow-hidden">
+      <div
+        className="bg-card overflow-hidden"
+        style={{
+          borderRadius: "16px",
+          border: "0.5px solid hsl(var(--border))",
+          boxShadow: "var(--shadow-soft)",
+        }}
+      >
         {properties.map((p, idx) => {
           const isDanger = p.accent === "danger";
           return (
             <button
               key={p.name}
               onClick={() => onSelect?.(p.name)}
-              className={`w-full text-left px-4 py-3 transition-colors hover:bg-secondary/40 ${idx > 0 ? "hairline-t" : ""}`}
+              className={`w-full text-left px-5 py-4 transition-colors hover:bg-secondary/60 ${idx > 0 ? "hairline-t" : ""}`}
               style={isDanger ? { boxShadow: "inset 3px 0 0 0 hsl(var(--danger))" } : undefined}
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[14px] font-medium text-foreground truncate">
+                <span className="text-[15px] font-medium text-foreground truncate" style={{ letterSpacing: "-0.01em" }}>
                   {p.name}
                 </span>
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <span className="text-[13px] font-medium tabular-nums text-foreground">
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[14px] font-medium tabular-nums text-foreground">
                     £{p.rent.toLocaleString()}
                   </span>
-                  <span className="text-[12px] text-muted-foreground tabular-nums">
-                    {p.rating.toFixed(1)} ★
+                  <span className="text-[12px] text-muted-foreground tabular-nums flex items-center gap-1">
+                    <span style={{ color: "#0F6E56" }}>★</span> {p.rating.toFixed(1)}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-3 mt-1">
+              <div className="flex items-center justify-between gap-3 mt-1.5">
                 <span className="text-[13px] text-muted-foreground truncate">
                   {p.compliance}
                 </span>

@@ -1,8 +1,5 @@
 import { cn } from "@/lib/utils";
-import {
-  Building2, User, Star, Plus, ChevronRight,
-} from "lucide-react";
-import { StarRating } from "./StarRating";
+import { Building2, User, Star, Plus } from "lucide-react";
 import {
   TENANT_INFO, HMO_TENANTS, PROP_PHOTOS,
   PROP_RATINGS, PAYMENTS_BY_PROP,
